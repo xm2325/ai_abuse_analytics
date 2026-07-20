@@ -29,18 +29,42 @@ The rules are frozen before the stress test. The adversarial benchmark does **no
 
 The development-derived velocity and quota cutoffs remain fixed.
 
+## Two recall views
+
+A specialized rule should not be judged only against every abuse type combined. v0.8 therefore retains both:
+
+- **overall known-abuse recall** — portfolio-level coverage across all synthetic abuse labels;
+- **target-scenario recall** — recall for the synthetic abuse family the rule was designed to detect.
+
+Target-scenario recall is the primary single-rule brittleness metric when target holdout examples exist. It is calculated only after frozen rule predictions are produced.
+
+### Evidence-volume boundary
+
+A dramatic percentage change can be meaningless when the denominator is tiny. Every stress row therefore reports `target_accounts_holdout`.
+
+The regression layer adds a `target_stress_evidence_volume` gate:
+
+```text
+n >= 3 target holdout accounts → diagnostic evidence-volume gate passes
+n < 3                         → warning: fragility hypothesis only
+```
+
+For example, `1/1 → 0/1` is a 100% target-recall drop mathematically, but it is **not** treated as a stable estimate of production resilience. It should trigger a hypothesis and a request for more time-based replay / holdout evidence, not a P0 policy conclusion by itself.
+
 ## Outputs
 
 ### `adversarial_rule_stress.csv`
 
 Per rule × strategy × adaptation strength:
 
-- baseline recall;
-- adapted recall;
-- recall drop;
+- target abuse family and target holdout count;
+- baseline/adapted target-scenario recall;
+- target-scenario recall drop;
+- baseline/adapted overall recall;
 - baseline/adapted precision;
 - baseline/adapted FPR;
-- review workload.
+- review workload;
+- recall metric scope.
 
 ### `defense_in_depth_stress.csv`
 
@@ -48,7 +72,7 @@ A diagnostic union of independent frozen rule families. It is not a production e
 
 ### `adversarial_stress_summary.json`
 
-Captures the worst observed single-rule degradation and worst defense-in-depth degradation, plus the operating response.
+Captures the worst observed single-rule degradation, its target evidence volume, the worst defense-in-depth degradation, and the operating response.
 
 ### `evasion_regression_gates.csv`
 
@@ -56,9 +80,10 @@ Release-style analytical gates:
 
 1. brittleness must be measured and surfaced rather than hidden;
 2. defense-in-depth should not degrade worse than the worst single rule;
-3. severe adaptation scenarios have a diagnostic recall floor.
+3. severe adaptation scenarios have a diagnostic recall floor;
+4. target-scenario stress must have enough holdout evidence before a stable resilience claim.
 
-A warning means **do not silently widen or promote the affected control**. It should trigger rework, independent-signal development, canary/replay testing, and rollback planning.
+A warning means **do not silently widen or promote the affected control**. It should trigger evidence expansion, rework, independent-signal development, canary/replay testing, and rollback planning.
 
 ## Threshold gaming and near-boundary behavior
 
@@ -77,6 +102,7 @@ A lower recall drop in the multi-rule diagnostic does **not** prove the system i
 
 Before operational use, still review:
 
+- target-scenario evidence volume;
 - false positives and legitimate-user impact;
 - analyst capacity and SLA;
 - label maturity and uncertainty;
