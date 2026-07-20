@@ -63,14 +63,22 @@ def test_v05_historical_replay_and_evidence_power(tmp_path):
 def test_v06_entitlement_abuse_and_shared_billing_context(tmp_path):
     run(tmp_path,n_accounts=120,seed=31)
     assert (tmp_path/"data/entitlements.csv").exists()
+    accounts=pd.read_csv(tmp_path/"data/accounts.csv")
     usage=pd.read_csv(tmp_path/"artifacts/entitlement_cycle_usage.csv")
     families=pd.read_csv(tmp_path/"artifacts/billing_family_risk.csv")
     queue=pd.read_csv(tmp_path/"artifacts/entitlement_investigation_queue.csv")
     dq=pd.read_csv(tmp_path/"artifacts/entitlement_data_quality.csv")
-    assert {"cycle_index","usage_ratio","near_limit","billing_family_ref"}.issubset(usage.columns)
+    expected={"scripted_automation","credential_sharing","quota_evasion","token_misuse","coordinated_abuse","policy_abuse"}
+    counts=accounts[accounts.ground_truth_abuse_type.ne("legitimate")].ground_truth_abuse_type.value_counts()
+    assert expected.issubset(set(counts.index))
+    assert (counts.loc[list(expected)]>=2).all()
+    assert {"cycle_index","usage_ratio","near_limit","billing_family_ref","entitlement_contract_version"}.issubset(usage.columns)
     assert {"family_accounts","near_limit_accounts","shared_billing_context","candidate_multi_account_evasion","reason_codes"}.issubset(families.columns)
     assert {"entitlement_schema","entitlement_account_referential_integrity","entitlement_cycle_uniqueness"}.issubset(set(dq.contract))
     assert dq.status.eq("pass").all()
     forbidden={"payment_details","card_number","raw_payment_method"}
     assert forbidden.isdisjoint(set(queue.columns))
+    assert len(queue)>0
+    assert families.candidate_multi_account_evasion.eq(1).any()
     assert ((families.shared_billing_context==1) & families.reason_codes.str.contains("shared_billing_requires_enterprise_context_review")).any()
+    assert not ((families.shared_billing_context==1) & (families.candidate_multi_account_evasion==1)).any()
