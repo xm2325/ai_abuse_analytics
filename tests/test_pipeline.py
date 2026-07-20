@@ -46,12 +46,15 @@ def test_v05_historical_replay_and_evidence_power(tmp_path):
     assert replay.lookahead_protection.eq("events_after_checkpoint_excluded").all()
     frozen=pd.read_csv(tmp_path/"artifacts/rule_shadow_evaluation.csv")
     assert frozen.threshold_source.eq("development_frozen").all()
-    for rule,g in frozen.groupby("rule_name"):
+    for _,g in frozen.groupby("rule_name"):
         assert g.velocity_cut.nunique(dropna=False)==1
         assert g.quota_cut.nunique(dropna=False)==1
     power=pd.read_csv(tmp_path/"artifacts/rule_evidence_power.csv")
     assert {"one_sided_95_fpr_upper","one_sided_95_precision_lower","evidence_sufficient_for_policy_review","decision_boundary"}.issubset(power.columns)
     assert power.decision_boundary.str.contains("never automatic enforcement").all()
+    registry=pd.read_csv(tmp_path/"artifacts/detection_rule_registry.csv")
+    assert {"evidence_gate_passed","evidence_gaps","one_sided_95_fpr_upper"}.issubset(registry.columns)
+    assert registry.loc[registry.stage.eq("canary_review_queue"),"evidence_gate_passed"].astype(str).str.lower().eq("true").all()
     sim=pd.read_csv(tmp_path/"artifacts/queue_simulation_summary.csv")
     assert {"analyst_fte","cases_arrived","final_backlog","max_backlog","p95_time_to_review_hours"}.issubset(sim.columns)
     assert (sim.final_backlog>=0).all()
