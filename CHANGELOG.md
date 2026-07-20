@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.0 — Trust & Safety operating and audit layer
+
+- Unified detection rules, candidate taxonomies, and policy experiments in `operating_control_registry.csv` with owners, lifecycle stages, evidence state, promotion gates, rollback triggers, source artifacts, and explicit no-auto-action boundaries.
+- Added `decision_lineage.csv` so each current operating decision can be traced to evidence, owner/partners, recommended action, review gate, and lineage boundary.
+- Added `data_lineage.csv` documenting source-of-truth separation, purpose, sensitivity, ownership, contracts, and freshness expectations across telemetry, accounts, entitlements, reviews, experiments, and evidence packages.
+- Added `operating_slo_scorecard.csv` covering source-contract health, one-FTE queue health, rule-evidence maturity, canary matured-review evidence, and the automatic-action boundary.
+- Added `incident_replay_register.csv` to reconstruct data-contract incidents and high-severity signal alerts with blast radius, response, replay evidence, and recovery gate.
+- Added deterministic `decision_audit_trail.csv` for the ordered evidence flow from ingestion/contracts through detection, discovery, replay/resilience, experiment, investigation, decision routing, and release readiness.
+- Added privacy-safe case-to-policy evidence packages under `artifacts/evidence_packages/`, linking investigation candidates to competing explanations, rule/evidence state, replay/resilience, experiment state, review feedback, privacy boundaries, and escalation gates.
+- Added `release_readiness.json` summarizing operating-layer status, SLO gaps, registered controls, evidence packages, experiment state, and explicit no-auto-enforcement/no-auto-expansion boundaries.
+- Added `docs/START_HERE.md` and a recruiter/manager-first v1.0 Operating Brief at the top of the Decision Center so the repository can be understood in a 2–3 minute review path.
+- Rewrote the README around the end-to-end operating decision flow rather than version-by-version feature accumulation.
+- Added v1.0 integration tests and CI artifact contracts for lineage, SLOs, audit, evidence packages, release readiness, governance boundaries, and Decision Center entry points.
+
+v1.0 is a portfolio/demo operating layer, not a production certification. It does not claim GitHub internal data, production thresholds, real enforcement systems, formal production incident tooling, or real policy approval.
+
 ## v0.9.0 — investigation experimentation and causal policy evaluation
 
 - Added a pre-rollout-only experiment assignment workflow so eligibility and randomization never use post-treatment behavior or hidden benchmark truth.
@@ -12,63 +28,31 @@
 - Added a benchmark-only hidden responder/migration manifest that is never used by assignment, estimation, HTE, or stopping-rule calculations.
 - Added Decision Center views, stakeholder routing, SQL workflow, documentation, tests, CI artifact contracts, and version 0.9.0.
 
-Policy experiment outputs are decision support only. No sequential metric auto-expands a canary, and no experimental result authorizes automatic enforcement. A production design would require formal power/MDE planning, experiment registry, exposure consistency, approved sequential inference, network-interference assumptions, privacy review, and policy-owner sign-off.
+Policy experiment outputs are decision support only. No sequential metric auto-expands a canary, and no experimental result authorizes automatic enforcement.
 
 ## v0.8.0 — adversarial adaptation and detection-resilience stress testing
 
 - Added frozen-rule adversarial stress tests across velocity smoothing, identity fragmentation, token rotation, quota spreading, policy-signal suppression, and blended multi-signal adaptation.
 - Added four synthetic adaptation strengths per scenario to measure recall degradation rather than assume static behavior.
 - Added per-rule brittleness outputs and a defense-in-depth diagnostic that compares diversified rule families against single-rule degradation.
-- Added release-style evasion regression gates, including a severe-adaptation recall floor and a rule-dependency review gate.
-- Added stakeholder action routing for material resilience degradation, with canary/replay/rollback recommendations.
+- Added release-style evasion regression gates and evidence-volume-aware stakeholder routing.
 - Added defensive SQL for near-boundary bunching, rule-overlap decay, canary rollback monitoring, and signal-diversity audits.
-- Added documentation, tests, CI artifact contracts, and version 0.8.0.
-
-The stress suite uses coarse synthetic feature transforms only. It does not reproduce real product controls, publish operational thresholds, provide bypass steps, or authorize automatic enforcement.
 
 ## v0.7.0 — unknown / emerging abuse discovery
 
-- Added a benchmark-only hidden late-emerging pattern that is absent from the known abuse taxonomy.
-- Added recent-vs-baseline multivariate novelty scoring without using abuse labels or review outcomes.
-- Added behavior-cohort clustering, candidate taxonomy proposals, and development-only shadow-rule definitions.
-- Added telemetry-health diagnostics so behavioral novelty is separated from instrumentation incidents before escalation.
-- Added graph/context triage with a strict boundary that IP-only overlap never proves common control.
-- Added benchmark-only hidden-pattern recall calculated after discovery; the hidden manifest is never used by ranking, clustering, graph triage, or taxonomy generation.
-- Added Decision Center views, SQL workflow, documentation, tests, and CI artifact contracts.
-
-Novelty is not an abuse verdict. A discovered cohort must pass analyst competing-explanation review, independent shadow/replay validation, matured-label review, uncertainty guardrails, and queue-capacity checks before any policy change.
+- Added a benchmark-only hidden late-emerging pattern absent from the known abuse taxonomy.
+- Added recent-vs-baseline multivariate novelty scoring, behavior-cohort clustering, candidate taxonomy proposals, telemetry-health diagnostics, and graph/context triage.
+- Hidden benchmark labels are never used by ranking, clustering, graph triage, or taxonomy generation.
 
 ## v0.6.0 — billing and entitlement abuse analytics
 
-- Added a separate synthetic entitlement ledger rather than treating telemetry as the billing source of truth.
-- Added cycle-level usage and effective-allowance analysis.
-- Added billing-family aggregation for multi-account entitlement-pressure investigation.
-- Added legitimate managed/shared-billing context as an explicit competing explanation before escalation.
-- Added privacy-safe entitlement investigation queues using pseudonymous billing-family references rather than raw payment details.
-- Added entitlement schema, referential-integrity, and account-cycle uniqueness contracts.
-- Added minimum benchmark coverage for all six abuse scenarios when sample size is sufficient, so CI cannot silently omit a JD-relevant scenario because of random sampling.
-- Added approved organization contexts with legitimate shared token/payment/runner entities. These contexts are excluded from model features and exist to prevent entity linkage from becoming a label shortcut.
-- Added Decision Center reporting, SQL investigation workflow, documentation, tests, and CI artifact contracts.
-
-Billing-family, shared-entity, and near-limit signals remain investigation leads only. Shared billing, shared infrastructure, or high utilization never authorizes automatic enforcement.
+- Added a separate synthetic entitlement ledger, cycle-level usage analysis, billing-family investigation, legitimate managed/shared-billing controls, and entitlement data contracts.
+- Added minimum benchmark coverage for all six known abuse scenarios and approved organization contexts with legitimate shared token/payment/runner entities.
 
 ## v0.5.0 — historical replay, evidence power, and queue stress testing
 
-- Added time-based historical replay with explicit no-lookahead windows and replay phases around mitigation and emerging-abuse changes.
-- Froze distribution-derived shadow-rule thresholds on the development split before holdout evaluation, removing holdout threshold adaptation.
-- Added one-sided uncertainty bounds for rule FPR and precision so small clean samples are not treated as sufficient policy evidence.
-- Added mature-label coverage at each replay checkpoint; unresolved or not-yet-mature labels are not silently treated as negatives.
-- Added synthetic analyst queue arrival/service simulation across 0.5, 1.0, and 2.0 FTE scenarios, including backlog, SLA, utilization, and p95 time-to-review diagnostics.
-- Added Decision Center sections, SQL replay example, operating documentation, tests, and CI artifact contracts for the new controls.
-
-All v0.5 outputs remain investigation and policy-review decision support. They never authorize automatic enforcement.
+- Added no-lookahead historical replay, frozen development thresholds, one-sided uncertainty/evidence-volume gates, delayed label maturity, and 0.5/1/2-FTE queue simulation.
 
 ## v0.4.0 — threshold policy simulation
 
-- Added a threshold frontier for human-review policy planning.
-- Added hard guardrails for global FPR, review workload, worst reportable slice FPR, minimum precision, and minimum triggered-account evidence volume.
-- Added an explicit `no_threshold_meets_all_guardrails` outcome rather than forcing a policy choice.
-- Added SQL threshold-frontier example and policy-review documentation.
-- Extended CI/tests to require the new policy artifacts.
-
-On the 180-account seed-17 synthetic benchmark, no threshold had enough evidence to satisfy every guardrail. The diagnostic least-violation threshold is not a production recommendation.
+- Added a threshold frontier with FPR, review-workload, worst-slice, precision, and trigger-volume guardrails plus an explicit `no_threshold_meets_all_guardrails` outcome.

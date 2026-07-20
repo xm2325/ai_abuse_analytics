@@ -1,414 +1,310 @@
-# AI Abuse Analytics
+# AI Abuse Analytics — Trust & Safety Operating Workbench
 
-A privacy-safe, reproducible Trust & Safety analytics workbench for AI developer-tool abuse investigation, detection validation, and policy decision support.
+A privacy-safe, reproducible portfolio project showing how an analyst can move from **AI-product telemetry → investigation → evidence → rule/policy decision → audit trail**.
 
-> **Portfolio scope:** this is an independent synthetic project inspired by analytical problems in a public GitHub Data Analyst role supporting Copilot Trust & Safety. It does not use GitHub internal data, rules, taxonomies, production thresholds, prompts, completions, experiments, or enforcement systems.
+> **Scope:** independent synthetic project inspired by analytical problems in a public GitHub Data Analyst role supporting Copilot Trust & Safety. It does **not** use GitHub internal data, prompts, completions, rules, taxonomies, thresholds, experiments, or enforcement systems.
 
-## Executive summary
+## Start here
 
-The project starts from operating decisions rather than a model leaderboard:
+For a 2–3 minute review:
 
-> With limited analyst capacity, which accounts should be investigated first, what benign explanations could produce the same signals, can we detect previously unknown abuse, will controls survive adaptive behavior, and did a mitigation actually reduce abuse rather than move it to another account or product surface?
+1. Open [`docs/START_HERE.md`](docs/START_HERE.md).
+2. Open the generated **Decision Center** at `docs/index.html` and read **v1.0 Operating brief — start here**.
+3. Inspect one generated `artifacts/evidence_packages/PKG-xxx.md` file to see how a case is connected to rule, experiment, data-quality and governance evidence.
+4. Read [`docs/JD_TRACEABILITY.md`](docs/JD_TRACEABILITY.md) for the public-role-to-repository mapping.
+
+## Executive question
+
+> With limited analyst capacity, which behavior should be investigated, what benign explanations could produce the same signals, is the evidence strong enough to change a rule or policy, did a mitigation really reduce harm rather than move it elsewhere, and can another team reconstruct why the decision was made?
+
+The project is deliberately organized around those decisions rather than a model leaderboard.
 
 ```text
-privacy-safe telemetry + account + entitlement sources
+privacy-safe telemetry + accounts + entitlements + review outcomes
         ↓
-data contracts and signal coverage
+data contracts / signal health / source-of-truth boundaries
         ↓
-known-signal monitoring + unknown-pattern discovery
+known-abuse detection + unknown-pattern discovery
         ↓
-SQL feature marts + conservative entity linkage
+investigation queue + entity / entitlement evidence
         ↓
-risk / anomaly / behavior cohorts / candidate rules
-        ↓
-false-positive, calibration, uncertainty and evidence-volume checks
+false-positive / uncertainty / evidence-volume checks
         ↓
 historical replay + adversarial adaptation stress
         ↓
 shadow → cluster-randomized canary/control experiment
         ↓
-ITT + spillover + displacement + user-impact guardrails
+ITT / placebo / negative control / spillover / displacement / user-impact
         ↓
-sequential human-reviewed stop / pause / rollback decision
+hold / continue / pause / rollback recommendation
         ↓
-investigation queue + linked-account + billing-family evidence
+versioned control registry + decision lineage + SLO + incident replay
         ↓
-human review → enforcement decision → appeal / overturn feedback
+case-to-policy evidence package + audit trail
         ↓
-rule / threshold / taxonomy / policy / data-integration revision
+human analyst / policy-owner decision
 ```
 
-The default analyst layer does **not** expose raw prompts, completions, IP addresses, raw device identifiers, card numbers, or payment details. Scores, novelty cohorts, rules, experiment estimates, and billing-family signals support human investigation and policy review; they never authorize automatic enforcement.
+No score, rule, cohort, experiment estimate, or evidence package authorizes automatic enforcement or automatic policy expansion.
 
-## What real work questions does it answer?
+# v1.0 — Operating and audit layer
 
-| Decision question | Main output | Failure mode guarded against |
-|---|---|---|
-| What should analysts review first? | investigation queue, P0–P3 SLA, capacity scenarios | optimizing AUC without considering workload |
-| Is high usage actually abuse? | behavioral evidence + legitimate power-user controls | `high usage = abuse` |
-| Are accounts truly linked? | token/payment/device/IP evidence with reliability rules | shared NAT/VPN/runner = same actor |
-| Is usage-limit evasion occurring? | cycle-level entitlement and billing-family analysis | high utilization/shared billing = abuse |
-| Is there a new modus operandi outside the taxonomy? | novelty scores, behavior cohorts, taxonomy proposals | only monitoring known rules |
-| Is novelty actually a telemetry incident? | recent-vs-baseline signal-health diagnostics | creating an abuse theory because instrumentation changed |
-| Is a new rule ready? | shadow evaluation, uncertainty bounds, evidence-volume gate | `precision=100%` on two cases = safe |
-| Did a rule still work later? | no-lookahead historical replay | random holdout hides temporal failure |
-| Will the rule survive adaptive behavior? | adversarial rule stress + defense-in-depth diagnostic | assuming users remain static after controls appear |
-| Did a mitigation actually work? | cluster-randomized canary ITT + placebo/negative controls | before/after movement = causal proof |
-| Did behavior move elsewhere? | alternate-surface, total-activity and spillover diagnostics | targeted metric falls while harm is displaced |
-| Should the canary continue or rollback? | sequential guardrails + stopping decision | automatic widening from one favorable metric |
-| Are effects different across user groups? | reportability-gated HTE diagnostics | overreacting to tiny subgroup estimates |
-| Can the team operationalize it? | queue arrival/service simulation | accurate rule creates unmanageable backlog |
-| Are legitimate users being harmed? | FPR/FNR slices, acceptance guardrails, appeals, overturns | ignoring delayed negative feedback |
+v1.0 does not add another classifier. It turns the v0.3–v0.9 analytical modules into one auditable operating system.
 
-# v0.9 — Investigation experimentation and causal policy evaluation
+## 1. Versioned control registry
 
-A mitigation can make the visible metric fall without reducing the underlying problem. v0.9 adds a separate experiment path designed around that failure mode.
+`artifacts/operating_control_registry.csv` puts the major analytical controls in one lifecycle view:
 
-## 1. Pre-rollout-only assignment
+- detection rules;
+- candidate abuse taxonomies;
+- policy experiments.
 
-Experiment eligibility, clustering, and stratification use **only data available before rollout**.
-
-The experiment intentionally does not use a full-period risk score for assignment because post-rollout behavior would leak treatment outcomes into experiment design.
-
-Pre-period inputs include:
+Each row records:
 
 ```text
-active days
-requests per active day
-aggregate policy-signal rate
-plan / region / managed-infrastructure context
-pre-period organization / token / payment relationships
+control id / type / version
+stage
+owner
+evidence state
+primary evidence
+promotion gate
+rollback trigger
+source artifacts
+automatic action boundary
 ```
 
-## 2. Cluster-randomized arms
+This prevents a rule, taxonomy proposal, or experiment from becoming an isolated notebook result with no owner or lifecycle.
 
-Accounts connected by stronger pre-period contexts are assigned together:
+## 2. Decision lineage
 
-```text
-same organization
-low-degree shared token context
-low-degree shared payment context
-        ↓
-randomization cluster
-```
-
-Arms:
+`artifacts/decision_lineage.csv` connects every current operating decision to:
 
 ```text
-control
-shadow
-canary
-```
-
-`shadow` has no user-facing treatment and provides an operational placebo/reference arm.
-
-IP overlap is deliberately **not** used as identity proof or as a strong randomization linkage. It remains weak context for spillover sensitivity because NAT, VPNs, enterprise egress, and shared infrastructure create benign overlap.
-
-## 3. Hidden benchmark truth cannot define the experiment
-
-Synthetic responder and migration truth lives in:
-
-```text
-data/hidden_policy_experiment_manifest.csv
-```
-
-It is benchmark-only and never used by:
-
-```text
-eligibility
-cluster construction
-stratification
-arm assignment
-effect estimation
-HTE
-sequential stopping
-```
-
-This prevents the evaluator from using the answer key to design the experiment.
-
-## 4. Causal estimands
-
-### ITT — assigned canary vs control
-
-The primary policy estimand is cluster-level intention-to-treat.
-
-```text
-assigned canary cluster change
-        minus
-assigned control cluster change
-```
-
-It answers the operational question:
-
-> What is the effect of assigning an eligible cluster to the canary under observed exposure and non-compliance?
-
-### Wald ATT-style diagnostic
-
-The project also reports:
-
-```text
-ITT / canary exposure rate
-```
-
-This is explicitly labeled a diagnostic because it requires strong exclusion/monotonicity-style assumptions. ITT remains the primary experiment view.
-
-## 5. A falling primary metric is not enough
-
-The experiment separately measures:
-
-```text
-primary-surface requests
-alternate-surface requests
-total requests
-acceptance-rate guardrail
-prompt-length negative control
-shadow placebo
-```
-
-Interpretation:
-
-```text
-primary falls a lot
-+ alternate surface rises
-+ total barely changes
-        ↓
-possible displacement
-not equivalent harm reduction
-```
-
-## 6. Interference and actor migration
-
-The workflow does not assume one account's treatment cannot affect another account.
-
-Synthetic benchmark scenarios include:
-
-```text
-policy affects account A
-        ↓
-activity moves to another surface
-or
-activity migrates toward account B
-```
-
-Outputs audit:
-
-- strong-link cluster integrity;
-- cross-arm weak-context neighborhoods;
-- direct primary movement;
-- alternate-surface displacement;
-- net total activity.
-
-IP-context overlap remains a **spillover sensitivity graph only** and never proves common control.
-
-## 7. Pre-trend, placebo and negative controls
-
-Before interpreting the canary effect, the project checks:
-
-```text
-pre-period slope gaps by arm
-shadow vs control placebo
-prompt-length negative-control effect
-```
-
-Material movement here is a reason to review randomization, implementation, logging, or model assumptions before making a causal claim.
-
-## 8. Sequential monitoring and stopping
-
-Post-rollout checkpoints report:
-
-```text
-primary ITT
-total-request ITT
-alternate-surface ITT
-acceptance-rate guardrail
-negative-control movement
-displacement ratio
+decision id
+priority
+owner + partners
+evidence summary
 recommended action
+review gate
+evidence references
+decision state
 ```
 
-Possible actions:
+The core question is not only **“what did the model say?”** but also:
+
+> Who owns the decision, which evidence supports it, what remains uncertain, and what must happen before the next stage?
+
+## 3. Data lineage and purpose limitation
+
+`artifacts/data_lineage.csv` makes source-of-truth boundaries explicit.
+
+Examples:
+
+| Source | Purpose | Important boundary |
+|---|---|---|
+| telemetry | behavioral analytics | not the billing source of truth |
+| entitlements | cycle/allowance analysis | separate billing/entitlement contract |
+| reviews | matured feedback | delayed outcomes are not silently treated as negatives |
+| pre-rollout telemetry | experiment assignment | post-treatment behavior prohibited from assignment |
+| investigation artifacts | evidence package | default layer remains privacy-safe/pseudonymous |
+
+The default analyst layer excludes raw prompts, completions, raw IPs, raw device identifiers, card numbers and payment details.
+
+## 4. Operating SLO scorecard
+
+`artifacts/operating_slo_scorecard.csv` turns analytical quality into operational gates.
+
+Current SLO families include:
+
+- source-contract health;
+- one-FTE queue/SLA health;
+- rule-evidence maturity;
+- canary matured-review evidence;
+- automatic-action boundary.
+
+An SLO can return `pass`, `review`, or `breach`. A breach blocks the relevant widening/retuning path rather than being hidden behind a model metric.
+
+## 5. Incident replay register
+
+`artifacts/incident_replay_register.csv` records a reproducible incident view:
 
 ```text
-hold_canary_collect_more_evidence
-continue_canary_collect_evidence
-pause_and_review_displacement
-rollback_to_shadow_user_impact_guardrail
+what signal failed or alerted
+how it was detected
+blast radius
+what decision was taken
+what evidence is replayed
+recovery gate
+current state
 ```
 
-The displayed monitoring interval is conservative and descriptive. It is **not** presented as a formal group-sequential alpha-spending design.
+Data-quality incidents and behavioral alerts are deliberately separated. Broken telemetry should be repaired/replayed before inventing a new abuse taxonomy or retuning a rule.
 
-No metric automatically widens a canary.
+## 6. Case → policy evidence package
 
-## 9. Delayed review / appeal guardrails
-
-Arm-level matured outcomes include:
+The pipeline generates privacy-safe evidence packages under:
 
 ```text
-matured reviews
-cleared rate
-enforcement rate
-appeal rate
-overturn rate
-evidence-volume status
+artifacts/evidence_packages/
 ```
 
-Tiny samples remain `limited_matured_review_evidence` rather than being converted into confident policy conclusions.
+A package links one investigation candidate to:
 
-## 10. Heterogeneous treatment effects
+- risk/reason-code context;
+- competing benign explanations;
+- entity-linkage cautions;
+- rule lifecycle/evidence state;
+- historical replay and adversarial-resilience evidence;
+- policy-experiment state;
+- review/appeal evidence;
+- privacy and escalation gates.
 
-Diagnostic HTE is reported by operational slices such as:
+It is a **decision package**, not an abuse verdict.
 
-```text
-plan
-managed infrastructure
-region
-```
+## 7. Deterministic audit trail and release readiness
 
-A slice is only marked reportable after minimum treated/control cluster evidence. These outputs are exploratory and do not justify slice-specific policy without multiplicity, power, stability, user-impact, and policy/legal review.
+`artifacts/decision_audit_trail.csv` records the ordered analytical stages for the current reproducible run.
 
-## Main v0.9 outputs
+`artifacts/release_readiness.json` summarizes:
 
-```text
-artifacts/policy_experiment_assignment.csv
-artifacts/policy_experiment_daily_outcomes.csv
-artifacts/policy_experiment_effect_summary.csv
-artifacts/policy_experiment_pretrend.csv
-artifacts/policy_experiment_heterogeneous_effects.csv
-artifacts/policy_experiment_sequential_monitor.csv
-artifacts/policy_experiment_interference_audit.csv
-artifacts/policy_experiment_review_guardrails.csv
-artifacts/policy_experiment_stopping_decision.json
-artifacts/policy_experiment_benchmark.json
-```
+- operating-layer status;
+- SLO breaches/reviews;
+- registered controls;
+- decision-lineage rows;
+- evidence-package count;
+- current policy-experiment state;
+- automatic enforcement/policy-expansion boundaries.
 
-See `docs/POLICY_EXPERIMENT_AND_CAUSAL_EVALUATION.md` and `sql/12_policy_experiment_evaluation.sql`.
+“Ready” means **portfolio/demo operating artifacts are coherent**, not that the repository is certified for production Trust & Safety use.
 
-# v0.8 — Adversarial adaptation and detection resilience
+# What real work questions does the repository answer?
 
-Static holdout performance is not enough for abuse detection. v0.8 freezes rule definitions and tests coarse synthetic adaptation families:
+| Decision question | Main evidence | Failure mode guarded against |
+|---|---|---|
+| What should analysts review first? | investigation queue, P0–P3 SLA, evidence packages | optimizing AUC without considering analyst capacity |
+| Is high usage actually abuse? | behavior + legitimate high-intensity controls | `high usage = abuse` |
+| Are accounts truly linked? | token/payment/device evidence + IP caution | NAT/VPN/shared runner = same actor |
+| Is usage-limit evasion occurring? | entitlement cycles + billing-family analysis | telemetry or near-limit usage = billing truth |
+| Is there a new modus operandi? | novelty cohorts + taxonomy proposals | only detecting known labels |
+| Is novelty actually a telemetry incident? | signal-health diagnostics | creating abuse theories from broken instrumentation |
+| Is a rule ready? | frozen holdout + uncertainty + evidence volume | `100% precision` on tiny samples = safe |
+| Does it still work later? | no-lookahead historical replay | random holdout hides temporal failure |
+| Will actors adapt around it? | adversarial stress + signal-diversity diagnostics | static-user assumption |
+| Did mitigation really work? | randomized synthetic canary ITT | before/after change = causal proof |
+| Did behavior move elsewhere? | alternate-surface + total activity + migration | targeted metric falls while underlying activity moves |
+| Should canary continue? | sequential/evidence-aware stopping | auto-widening from one favorable metric |
+| Are legitimate users harmed? | FPR slices + acceptance + appeal/overturn | delayed negative feedback ignored |
+| Can another team audit the decision? | control registry + lineage + SLO + audit + packages | one-off analyst logic cannot be reconstructed |
 
-```text
-velocity_smoothing
-identity_fragmentation
-token_rotation
-quota_spreading
-policy_signal_suppression
-multi_signal_blending
-```
+# Analytical layers
 
-It measures target-scenario and overall recall degradation, defense-in-depth resilience, review-workload changes, and release-style regression gates. Small target samples are explicitly treated as fragility hypotheses rather than stable resilience estimates.
+## Known abuse detection
 
-See `docs/ADVERSARIAL_ADAPTATION.md` and `sql/11_adversarial_rule_resilience.sql`.
+Synthetic scenarios include scripted automation, credential sharing, quota/entitlement evasion, token misuse, coordinated abuse, and aggregate policy/prompt-injection signals.
 
-# v0.7 — Unknown / emerging abuse discovery
+Methods include:
 
-A benchmark-only hidden pattern is injected, but discovery cannot read its manifest.
+- SQL-style feature marts;
+- logistic baseline;
+- Isolation Forest;
+- conservative graph/entity signal;
+- frozen shadow rules;
+- FPR/FNR and slice diagnostics;
+- calibration and drift diagnostics.
+
+## Legitimate-user confounders
+
+The synthetic benchmark deliberately includes:
+
+- power users;
+- shared enterprise/network infrastructure;
+- security-research behavior;
+- approved organization contexts with legitimate shared token/payment/runner entities.
+
+Approved-organization context is not used as a model label shortcut.
+
+## Unknown / emerging abuse discovery
+
+A benchmark-only hidden pattern is injected but cannot be read by discovery.
 
 ```text
 recent vs baseline behavior
-        ↓
-robust novelty score
-        ↓
-behavior cohort
-        ↓
-telemetry-health screen
-        ↓
-graph/context triage
-        ↓
-candidate taxonomy
-        ↓
-independent shadow replay required
+→ robust novelty
+→ behavior cohorts
+→ telemetry-health screen
+→ graph/context triage
+→ candidate taxonomy
+→ independent shadow replay required
 ```
 
-Novelty is not an abuse verdict. Product launches, SDK changes, enterprise automation, migrations, integrations, or telemetry regressions can produce similar patterns.
+Novelty is never treated as an abuse finding by itself.
 
-See `docs/EMERGING_ABUSE_DISCOVERY.md` and `sql/10_emerging_abuse_discovery.sql`.
+## Historical replay and evidence power
 
-# v0.6 — Billing and entitlement abuse analytics
+Rules are replayed at historical checkpoints with events after each checkpoint excluded.
 
-Telemetry is not treated as billing truth. A separate entitlement ledger is aligned to account cycles before multi-account pressure is analyzed.
+Evidence outputs include:
+
+- mature-label coverage;
+- observed FPR/precision;
+- one-sided uncertainty bounds;
+- trigger volume;
+- evidence sufficiency.
+
+Zero observed false positives on a tiny sample is not considered sufficient evidence.
+
+## Adversarial adaptation / resilience
+
+Frozen rules are stress-tested against coarse synthetic adaptation families:
 
 ```text
-data/entitlements.csv
-        ↓
-entitlement_cycle_usage.csv
-        ↓
-billing_family_risk.csv
-        ↓
-entitlement_investigation_queue.csv
+velocity smoothing
+identity fragmentation
+token rotation
+quota spreading
+policy-signal suppression
+multi-signal blending
 ```
 
-Legitimate managed/shared organization billing is explicitly represented as a competing explanation.
+The output measures rule brittleness and whether independent signal families degrade more gracefully. Exact production thresholds are never represented.
 
-See `docs/BILLING_ENTITLEMENT_INVESTIGATION.md` and `sql/09_entitlement_evasion_investigation.sql`.
+## Policy experimentation / causal evaluation
 
-# v0.5 — Time-based validation, evidence power and queue stress
+The synthetic experiment uses **pre-rollout-only** eligibility/clustering/stratification and cluster-randomizes strong observed org/token/payment contexts into control, shadow and canary arms.
 
-- no-lookahead historical replay;
-- delayed-label coverage;
-- one-sided rule uncertainty bounds;
-- evidence-volume gates;
-- 0.5 / 1.0 / 2.0 analyst-FTE queue simulations.
+Outputs include:
 
-A clean point estimate on a tiny sample is not treated as policy evidence.
+- ITT and clearly labeled Wald ATT-style diagnostic;
+- shadow placebo;
+- negative-control outcome;
+- pre-trend diagnostics;
+- alternate-surface and total-activity displacement;
+- interference/migration sensitivity;
+- HTE with reportability gates;
+- sequential monitoring;
+- evidence-aware hold/pause/rollback decision.
 
-See `docs/HISTORICAL_REPLAY_AND_EVIDENCE.md` and `sql/08_historical_rule_replay.sql`.
+A targeted metric decrease is not automatically called a mitigation success.
 
-# Detection, investigation and governance layers
+# Main decision products
 
-## Synthetic known-abuse scenarios
+```text
+docs/START_HERE.md
+docs/index.html
+artifacts/executive_brief.md
+artifacts/stakeholder_action_register.csv
+artifacts/operating_control_registry.csv
+artifacts/decision_lineage.csv
+artifacts/data_lineage.csv
+artifacts/operating_slo_scorecard.csv
+artifacts/incident_replay_register.csv
+artifacts/decision_audit_trail.csv
+artifacts/evidence_package_index.csv
+artifacts/evidence_packages/*.md
+artifacts/release_readiness.json
+```
 
-- scripted automation;
-- credential sharing;
-- quota/entitlement evasion;
-- token misuse;
-- coordinated abuse;
-- policy/prompt-injection-related signals.
-
-## Deliberately difficult legitimate controls
-
-- high-intensity power users;
-- security-research behavior;
-- shared enterprise/network infrastructure;
-- approved organization contexts with legitimate shared token/payment/runner entities.
-
-Approved-organization context is available to investigators but excluded from model features, preventing it from becoming a label shortcut.
-
-## Conservative entity linkage
-
-| Entity | Analytical treatment |
-|---|---|
-| token fingerprint | strong supporting linkage; lifecycle/context still required |
-| payment fingerprint | strong supporting linkage; ownership/billing context required |
-| device fingerprint | useful with corroboration |
-| IP context | supporting context only |
-
-IP-only overlap never proves common control.
-
-## Review → appeal → overturn feedback
-
-Synthetic case management includes review outcomes, enforcement actions, appeals, overturns, decision latency, taxonomy version, and policy version. Cleared and overturned cases feed back into threshold, rule, taxonomy, and experiment review.
-
-## Data quality is part of detection
-
-Contracts cover schema, request-ID uniqueness, account referential integrity, signal coverage, entitlement schema, account-cycle uniqueness, and instrumentation regressions.
-
-A telemetry failure should trigger data repair and annotation before detection or experiment retuning.
-
-# Decision products
-
-The pipeline produces:
-
-- interactive `docs/index.html` Decision Center;
-- executive brief;
-- Trust & Safety brief;
-- Engineering/data-integration brief;
-- privacy/legal governance brief;
-- stakeholder action register;
-- investigation case bundles;
-- reusable SQL workflows and semantic views;
-- rule resilience / rollback artifacts;
-- cluster-randomized canary experiment and causal-policy diagnostics.
+Detailed analytical outputs remain available for detection, discovery, billing/entitlement, replay, evidence power, queue simulation, adversarial stress and policy experiments.
 
 # Quick start
 
@@ -419,48 +315,47 @@ pip install -r requirements.txt
 python run_all.py --n-accounts 180 --seed 17
 ```
 
-Run tests:
+Tests:
 
 ```bash
 pytest -q
 ```
 
-GitHub Actions independently rebuilds a 120-account benchmark, verifies required decision artifacts, and uploads the decision package.
+GitHub Actions independently rebuilds a 120-account benchmark, verifies required decision/operating artifacts, checks the automatic-action boundary, and uploads the complete review package.
 
 # Repository map
 
 ```text
 src/copilot_trust/
-  generate.py             known synthetic abuse + review feedback
-  synthetic_controls.py   legitimate shared-entity confounders
-  synthetic_novelty.py    hidden emerging-pattern benchmark injection
-  emerging_discovery.py   novelty/cohort/taxonomy/graph discovery
-  adversarial_stress.py   adaptive-behavior resilience stress tests
-  policy_experiment.py    cluster-randomized canary + causal diagnostics
-  entitlements.py         entitlement ledger + billing-family analysis
-  features.py             SQL-style feature mart
-  scoring.py              supervised + anomaly + graph prioritization
-  monitoring.py           recurring known-signal monitoring
-  historical_replay.py    no-lookahead time replay
-  evidence_power.py       rule uncertainty/evidence gates
-  rules.py                shadow rule evaluation
-  rule_registry.py        promotion/rollback lifecycle
-  investigate.py          queues, case evidence, linked accounts
-  feedback.py             review/appeal/overturn loop
-  mitigation.py           legacy DiD-style diagnostics
-  queue_ops.py            SLA/capacity planning
-  queue_simulation.py     arrival/service stress testing
-  data_quality.py         contracts + integration backlog
-  reporting.py            Decision Center + executive brief
+  generate.py               synthetic known-abuse + review-feedback scenarios
+  synthetic_controls.py     legitimate confounders
+  synthetic_novelty.py      hidden unknown-pattern benchmark
+  features.py               SQL-style account feature mart
+  scoring.py                supervised + anomaly + graph prioritization
+  monitoring.py             recurring signal monitoring
+  emerging_discovery.py     unknown-pattern cohort/taxonomy discovery
+  entitlements.py           billing/entitlement source-of-truth analysis
+  rules.py                  frozen shadow rules
+  evidence_power.py         uncertainty/evidence-volume gates
+  historical_replay.py      no-lookahead temporal validation
+  adversarial_stress.py     adaptive-behavior resilience tests
+  policy_experiment.py      cluster-randomized synthetic canary analysis
+  experiment_guardrails.py  evidence-aware stopping decisions
+  investigate.py            queue, case timelines and linkage evidence
+  feedback.py               review/appeal/overturn loop
+  operating_layer.py        v1 control registry, lineage, SLO, replay, audit, packages
+  operating_report.py       recruiter/manager-first operating brief
+  reporting.py              Decision Center + executive brief
 
-sql/                      reusable analyst queries
-docs/                     architecture, governance, runbooks, JD mapping
-tests/                    integration and enforcement-boundary tests
-.github/workflows/         reproducible CI benchmark
+sql/                        reusable analyst workflows
+docs/                       architecture, runbooks, JD traceability
+artifacts/                  generated decision/evidence products
+tests/                      integration and governance-boundary tests
+.github/workflows/          reproducible CI benchmark
 ```
 
 # Production boundary
 
-CSV + SQLite/Pandas are used for a local reproducible portfolio benchmark. A production design would require partitioned event-time marts, incremental materialization, late-arrival handling, idempotent backfills, versioned data/taxonomy contracts, experiment registry, power/MDE planning, treatment/exposure consistency, cluster-level or randomization inference, approved sequential testing, network-interference assumptions, experiment collision management, restricted sensitive-data access, auditable policy/review systems, and controlled access to operational thresholds.
+This repository uses CSV/SQLite/Pandas-style local workflows for a reproducible portfolio benchmark. A production system would additionally require partitioned/incremental event infrastructure, late-arrival/idempotent backfill handling, IAM and retention controls, restricted sensitive-data workflows, formal experiment governance and power analysis, service ownership/on-call processes, immutable audit infrastructure, incident tooling, approved policy/legal procedures, and production-scale observability.
 
-This repository intentionally does not claim GitHub-scale data, internal Copilot telemetry, internal abuse taxonomy access, production experiments, production thresholds, or production enforcement experience.
+The repository intentionally does **not** claim GitHub-scale data, internal Copilot telemetry, internal abuse taxonomies, real production thresholds, real enforcement systems, or causal effects on a real product.
