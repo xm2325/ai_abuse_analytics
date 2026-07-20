@@ -32,14 +32,12 @@ def _assignment(accounts: pd.DataFrame, t: pd.DataFrame, seed: int) -> tuple[pd.
     agg["pre_requests_per_active_day"]=agg.pre_requests/agg.pre_active_days.clip(lower=1)
     agg["pre_policy_signal_rate"]=agg.pre_policy_signals/agg.pre_requests.clip(lower=1)
     base=accounts[["account_id","plan","region","org_id","managed_infrastructure"]].merge(agg,on="account_id",how="left").fillna(0)
-    # Eligibility is entirely pre-period and label-free. Rank-based components keep the rule robust to scale.
     for c in ["pre_requests_per_active_day","pre_policy_signal_rate","pre_devices","pre_ips"]:
         base[c+"_pct"]=base[c].rank(pct=True,method="average")
     base["pre_eligibility_score"]=0.45*base.pre_requests_per_active_day_pct+0.25*base.pre_policy_signal_rate_pct+0.15*base.pre_devices_pct+0.15*base.pre_ips_pct
     cutoff=float(base.loc[base.pre_active_days>=5,"pre_eligibility_score"].quantile(0.45)) if (base.pre_active_days>=5).any() else 0
     base["eligible"]=((base.pre_active_days>=5)&(base.pre_eligibility_score>=cutoff)).astype(int)
     ids=base.loc[base.eligible.eq(1),"account_id"].tolist(); uf=_UF(ids)
-    # Stronger observed contexts define randomization clusters. No outcome or hidden responder truth is used.
     for _,m in base[base.eligible.eq(1)&base.org_id.astype(str).ne("0")&base.org_id.astype(str).ne("")].groupby("org_id").account_id.apply(list).items():
         for x in m[1:]: uf.union(m[0],x)
     pe=pre[pre.account_id.isin(ids)]
@@ -57,12 +55,24 @@ def _assignment(accounts: pd.DataFrame, t: pd.DataFrame, seed: int) -> tuple[pd.
     for _,g in cl.groupby("stratum"):
         arr=g.cluster_id.to_numpy().copy();rng.shuffle(arr)
         for j,cid in enumerate(arr):amap[str(cid)]=str(pattern[j%len(pattern)])
-    cl["arm"]=cl.cluster_id.map(amap);cl["cluster_exposed"]=cl.apply(lambda r:int(r.arm=="canary" and _u(f"exp:{seed}:{r.cluster_id}")<0.82),axis=1)
+    cl["arm"]=cl.cluster_id.map(amap)
+    # Exposure is assigned only after arm randomization and remains outcome/manifest blind.
+    # Deterministic hash ranking gives an auditable ~80% canary exposure rate while preserving
+    # at least one unexposed canary cluster when more than one canary cluster exists.
+    cl["cluster_exposed"]=0
+    canary_idx=cl.index[cl.arm.eq("canary")].tolist()
+    ordered=sorted(canary_idx,key=lambda ix:_u(f"exp:{seed}:{cl.loc[ix,'cluster_id']}"))
+    if len(ordered)==1:
+        n_expose=1
+    elif len(ordered)>1:
+        n_expose=max(1,min(len(ordered)-1,int(round(0.80*len(ordered)))))
+    else:
+        n_expose=0
+    if n_expose: cl.loc[ordered[:n_expose],"cluster_exposed"]=1
     a=e.merge(cl[["cluster_id","stratum","arm","cluster_exposed"]],on="cluster_id",how="left")
     a["assigned_canary"]=a.arm.eq("canary").astype(int);a["exposed"]=a.cluster_exposed.astype(int)
     a["weak_context_id"]=a.region.astype(str)+"|"+a.plan.astype(str)+"|"+a.account_id.map(lambda x:str(int(_u("ctx:"+x)*4)))
     ctx_canary=a.groupby("weak_context_id").assigned_canary.mean().rename("weak_context_canary_share");a=a.merge(ctx_canary,on="weak_context_id",how="left")
-    # IP is retained only as a weak context graph for interference sensitivity, never identity proof.
     pairs=[]
     for ip,m in pe[pe.ip_hash.fillna("").ne("")].groupby("ip_hash").account_id.unique().items():
         m=sorted(set(m))
@@ -84,7 +94,6 @@ def _panel(t:pd.DataFrame,a:pd.DataFrame)->pd.DataFrame:
 
 
 def _inject(panel:pd.DataFrame,a:pd.DataFrame,seed:int)->tuple[pd.DataFrame,pd.DataFrame]:
-    """Inject benchmark-only response heterogeneity independent of abuse labels and assignment."""
     out=panel.copy();out["primary_requests"]=out.raw_primary.astype(float);out["alternate_surface_requests"]=out.raw_alt.astype(float);out["acceptance_rate"]=out.accepted/out.raw_requests.clip(lower=1);out["migration_inflow"]=0.0
     meta=a.set_index("account_id");manifest=[];targets={}
     for acc in meta.index:
@@ -95,8 +104,7 @@ def _inject(panel:pd.DataFrame,a:pd.DataFrame,seed:int)->tuple[pd.DataFrame,pd.D
         if not cand and exposed and mig>0:cand=meta[(meta.region==meta.loc[acc,"region"])&(meta.arm!="canary")].index.tolist()
         target=sorted(cand)[int(_u(f"target:{seed}:{acc}")*len(cand))%len(cand)] if cand else None;targets[acc]=target
         manifest.append({"account_id":acc,"true_responder":responder,"hidden_response_fraction":direct,"injected_primary_fraction_reduction":direct if exposed else 0.0,"injected_alt_displacement_fraction":0.45 if (responder and exposed) else 0.0,"injected_neighbor_migration_fraction":mig if exposed else 0.0,"migration_target_account":target or "","manifest_boundary":"benchmark only; never used by assignment or effect estimation"})
-    adds=[]
-    mm=pd.DataFrame(manifest).set_index("account_id")
+    adds=[];mm=pd.DataFrame(manifest).set_index("account_id")
     for acc in meta.index:
         mask=out.account_id.eq(acc)&out.post.eq(1)&out.arm.eq("canary")&out.exposed.eq(1);direct=float(mm.loc[acc,"injected_primary_fraction_reduction"])
         if not mask.any():continue
@@ -145,7 +153,8 @@ def _sequential(p):
     rows=[]
     for i,cp in enumerate(cps,1):
         pri=_effect(p,"primary_requests",upto=cp);tot=_effect(p,"total_requests",upto=cp);alt=_effect(p,"alternate_surface_requests",upto=cp);acc=_effect(p,"acceptance_rate",upto=cp);neg=_effect(p,"prompt_chars_mean",upto=cp);ratio=max(0,alt["estimate"])/max(1e-9,-pri["estimate"]) if np.isfinite(pri["estimate"]) and pri["estimate"]<0 and np.isfinite(alt["estimate"]) else np.nan;lo=pri["estimate"]-2.58*pri["se"] if np.isfinite(pri["se"]) else np.nan;hi=pri["estimate"]+2.58*pri["se"] if np.isfinite(pri["se"]) else np.nan
-        action="rollback_to_shadow_user_impact_guardrail" if np.isfinite(acc["estimate"]) and acc["estimate"]<-0.03 else "pause_and_review_displacement" if np.isfinite(ratio) and ratio>0.60 else "continue_canary_collect_evidence" if np.isfinite(hi) and hi<0 else "hold_canary_collect_more_evidence"
+        user_harm=bool(np.isfinite(acc["estimate"]) and acc["estimate"]<-0.03 and np.isfinite(acc["ci95_high"]) and acc["ci95_high"]<0)
+        action="rollback_to_shadow_user_impact_guardrail" if user_harm else "pause_and_review_displacement" if np.isfinite(ratio) and ratio>0.60 else "continue_canary_collect_evidence" if np.isfinite(hi) and hi<0 else "hold_canary_collect_more_evidence"
         rows.append({"look":i,"checkpoint":cp.date().isoformat(),"primary_itt":pri["estimate"],"primary_monitor_99_low":lo,"primary_monitor_99_high":hi,"total_requests_itt":tot["estimate"],"alternate_surface_itt":alt["estimate"],"acceptance_rate_itt":acc["estimate"],"negative_control_prompt_chars_itt":neg["estimate"],"displacement_ratio":ratio,"recommended_action":action,"sequential_boundary":"conservative 99% descriptive monitoring; human review required; not formal alpha-spending proof"})
     return pd.DataFrame(rows)
 
@@ -153,7 +162,7 @@ def _sequential(p):
 def _reviews(data,a):
     r=pd.read_csv(data/"reviews.csv");r["review_date"]=pd.to_datetime(r.review_date,utc=True,format="mixed");r=r[r.review_date>=ROLLOUT].merge(a[["account_id","arm"]],on="account_id",how="inner");rows=[]
     for arm in ARMS:
-        g=r[r.arm.eq(arm)];enf=g[g.enforcement_action.ne("none")];ap=enf[enf.appeal_filed.eq(1)];rows.append({"arm":arm,"matured_reviews":len(g),"cleared_rate":float(g.final_outcome.eq("cleared").mean()) if len(g) else np.nan,"enforcement_rate":float(g.enforcement_action.ne("none").mean()) if len(g) else np.nan,"appeal_rate_among_enforced":float(enf.appeal_filed.mean()) if len(enf) else np.nan,"overturn_rate_among_appeals":float(ap.appeal_outcome.eq("overturned").mean()) if len(ap) else np.nan,"evidence_status":"reportable" if len(g)>=3 else "limited_matured_review_evidence"})
+        g=r[r.arm.eq(arm)];enf=g[g.enforcement_action.ne("none")];ap=enf[enf.appeal_filed.eq(1)];rows.append({"arm":arm,"matured_reviews":len(g),"cleared_rate":float(g.final_outcome.eq("cleared").mean()) if len(g) else np.nan,"enforcement_rate":float(g.enforcement_action.ne("none").mean()) if len(g) else np.nan,"appeal_rate_among_enforced":float(enf.appeal_filed.mean()) if len(enf) else np.nan,"overturn_rate_among_appeals":float(ap.appeal_outcome.eq("overturned").mean()) if len(ap) else np.nan,"evidence_status":"reportable" if len(g)>=5 else "limited_matured_review_evidence"})
     return pd.DataFrame(rows)
 
 
@@ -175,10 +184,10 @@ def evaluate_policy_experiment(data_dir:str|Path,out_dir:str|Path,seed:int=17)->
         {"estimand":"shadow_placebo_vs_control","outcome":"total_requests",**{k:placebo[k] for k in ["estimate","ci95_low","ci95_high","n_treated_clusters","n_control_clusters"]},"interpretation":"shadow has no user-facing treatment; material effect is a randomization/pretrend warning"}
     ])
     pre=_pretrend(p);hte=_hte(p);seq=_sequential(p);rev=_reviews(data,a);can=rev[rev.arm.eq("canary")].iloc[0];reasons=[]
-    if np.isfinite(acc["estimate"]) and acc["estimate"]<-0.03:reasons.append("acceptance_rate_harm")
+    if np.isfinite(acc["estimate"]) and acc["estimate"]<-0.03 and np.isfinite(acc["ci95_high"]) and acc["ci95_high"]<0:reasons.append("acceptance_rate_harm")
     if np.isfinite(ratio) and ratio>0.60:reasons.append("high_behavior_displacement")
     if pre.loc[pre.arm.eq("canary"),"diagnostic_status"].eq("review_parallel_trend_risk").any():reasons.append("pretrend_risk")
-    if int(can.matured_reviews)>=3 and float(can.cleared_rate)>0.35:reasons.append("high_matured_clearance_rate")
+    if int(can.matured_reviews)>=5 and float(can.cleared_rate)>0.35:reasons.append("high_matured_clearance_rate")
     state="rollback_or_pause_to_shadow_for_review" if reasons else "continue_limited_canary_collect_matured_evidence" if np.isfinite(pri["ci95_high"]) and pri["ci95_high"]<0 else "hold_current_canary_collect_more_evidence"
     stop={"recommended_state":state,"guardrail_reasons":reasons,"primary_itt":pri["estimate"],"primary_itt_ci95":[pri["ci95_low"],pri["ci95_high"]],"exposure_rate_canary":exposure,"wald_att_style":att,"displacement_ratio":ratio,"automatic_policy_expansion_allowed":False,"decision_boundary":"human policy-owner review required; sequential diagnostics never auto-expand or auto-enforce"}
     exposed_resp=manifest[(manifest.true_responder.eq(1))&(manifest.injected_primary_fraction_reduction>0)];bench={"hidden_manifest_present":True,"manifest_used_by_assignment":False,"manifest_used_by_effect_estimation":False,"eligible_accounts":len(a),"randomization_clusters":a.cluster_id.nunique(),"canary_exposure_rate":exposure,"hidden_responders":int(manifest.true_responder.sum()),"hidden_exposed_responders":len(exposed_resp),"hidden_migration_sources":int(manifest.injected_neighbor_migration_fraction.gt(0).sum()),"estimated_primary_itt":pri["estimate"],"estimated_total_itt":tot["estimate"],"benchmark_boundary":"hidden responder/migration manifest is benchmark-only and never used by assignment, estimation, HTE, or stopping-rule calculations"}
