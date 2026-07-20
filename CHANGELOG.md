@@ -8,9 +8,11 @@
 - Added legitimate managed/shared-billing context as an explicit competing explanation before escalation.
 - Added privacy-safe entitlement investigation queues using pseudonymous billing-family references rather than raw payment details.
 - Added entitlement schema, referential-integrity, and account-cycle uniqueness contracts.
+- Added minimum benchmark coverage for all six abuse scenarios when sample size is sufficient, so CI cannot silently omit a JD-relevant scenario because of random sampling.
+- Added approved organization contexts with legitimate shared token/payment/runner entities. These contexts are excluded from model features and exist to prevent entity linkage from becoming a label shortcut.
 - Added Decision Center reporting, SQL investigation workflow, documentation, tests, and CI artifact contracts.
 
-Billing-family and near-limit signals remain investigation leads only. Shared billing or high utilization never authorizes automatic enforcement.
+Billing-family, shared-entity, and near-limit signals remain investigation leads only. Shared billing, shared infrastructure, or high utilization never authorizes automatic enforcement.
 
 ## v0.5.0 — historical replay, evidence power, and queue stress testing
 
