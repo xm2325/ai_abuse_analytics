@@ -1,71 +1,76 @@
 # Start here — AI Abuse Analytics v1.0
 
 ## 30-second answer
-
-This repository is a **synthetic, privacy-safe Trust & Safety analytics operating workbench for an AI developer product**.
-
-It demonstrates how an analyst can connect:
-
-```text
-telemetry / accounts / entitlements / review feedback
-→ data contracts
-→ known-abuse detection + unknown-pattern discovery
-→ investigation
-→ evidence power + historical replay + adversarial resilience
-→ controlled policy experiment
-→ decision lineage + SLO + incident replay + audit
-→ human policy decision
-```
+This repository is a **synthetic, privacy-safe Trust & Safety analytics operating workbench for an AI developer product**. It connects telemetry, account, entitlement and review signals to known-abuse detection, unknown-pattern discovery, investigation, rule evidence, adversarial-resilience testing, controlled policy experiments, appeal/overturn feedback, and auditable operating decisions.
 
 It does **not** use GitHub internal data or claim production enforcement experience.
 
+## Current operating state
+- Release: **1.0.0**
+- Artifact integrity: **ready_for_portfolio_demo**
+- Operating status: **ready_with_active_operating_hold**
+- Current decision state: **blocked_by_active_operating_slo_breach**
+- Registered controls: **9**
+- SLO breaches: **1**; review-needed SLOs: **2**
+- Active incident/replay rows: **4**
+- Policy experiment state: **hold_canary_review_displacement_collect_more_evidence**
+- Automatic enforcement: **disabled**
+- Automatic policy expansion: **disabled**
+
+The apparent tension is intentional: the **v1 artifacts are coherent and demo-ready**, while the current synthetic operating run correctly blocks widening/retuning because an injected IP-coverage incident is active and evidence/review maturity gates remain open.
+
+## The four questions to ask
+1. **What should an analyst investigate now?** — `artifacts/investigation_queue.csv` and privacy-safe case files.
+2. **Is the evidence strong enough to change a rule/taxonomy?** — rule registry, evidence-power bounds, historical replay and adversarial stress.
+3. **Did a mitigation actually reduce harm, or move behavior elsewhere?** — cluster-randomized synthetic canary, ITT/ATT-style diagnostics, placebo/negative controls and displacement monitoring.
+4. **Can another team reconstruct why a decision was made?** — `operating_control_registry.csv`, `decision_lineage.csv`, `decision_audit_trail.csv`, `data_lineage.csv`, SLOs and evidence packages.
+
+## Current hold / review signals
+| priority | decision | current state |
+|---|---|---|
+| P0 | review threshold impact on legitimate usage | `blocked_or_hold` |
+| P0 | protect detection from telemetry regressions | `blocked_or_hold` |
+| P1 | policy canary continue / pause / return to shadow | `blocked_or_hold` |
+
+## Operating SLOs needing attention
+| SLO | observed | status | action |
+|---|---:|---|---|
+| source contract health | 1 failing/warning contract | breach | repair/annotate source before detection or taxonomy changes |
+| rule evidence maturity | 0 evidence-ready rules | review | keep rules in shadow; collect independent replay/matured labels |
+| canary matured-review evidence | 4 matured reviews | review | hold/limit canary; collect matured review and appeal outcomes |
+
+The synthetic IP-coverage incident is deliberate. It demonstrates that a healthy operating layer can still produce a **hold** when its source/evidence SLOs say not to widen policy.
+
+## One evidence package to inspect
+`artifacts/evidence_packages/PKG-001.md`
+
+The final CI benchmark generated three privacy-safe packages. They connect each pseudonymous investigation candidate to:
+
+- reason codes and risk priority;
+- the **relevant** registered rule family rather than a globally convenient rule;
+- active data-contract caveats;
+- historical replay / evidence-power / adversarial-resilience context;
+- current policy-experiment state;
+- competing benign explanations;
+- privacy and escalation gates.
+
 ## 2–3 minute review path
+1. Open `docs/index.html` and read **v1.0 Operating brief — start here**.
+2. Inspect **Decision lineage** and **Operating SLO scorecard** before reading model metrics.
+3. Inspect one **Case → policy evidence package**.
+4. Scroll to **Policy experiment / causal evaluation** to see why a targeted metric decrease is not automatically called a success.
+5. Scroll to **Unknown / emerging abuse discovery** and **Adversarial adaptation** to see how the system handles novel and adaptive behavior.
+6. Read `docs/JD_TRACEABILITY.md` for the public-role-to-repository mapping.
 
-1. Open [`index.html`](index.html) and read **v1.0 Operating brief — start here** at the top.
-2. Review **Decision lineage**: what decision needs attention, who owns it, and what gate remains.
-3. Review **Operating SLO scorecard**: what passes, what needs review, and what would block widening/retuning.
-4. Inspect one generated `artifacts/evidence_packages/PKG-xxx.md` after running the benchmark: this shows how a pseudonymous investigation candidate connects to competing explanations, rule evidence, experiment state and governance boundaries.
-5. Scroll to **Policy experiment / causal evaluation**: targeted metric improvement is not automatically called success when behavior may be displaced.
-6. Scroll to **Unknown / emerging abuse discovery** and **Adversarial adaptation**: see how the system handles patterns outside the taxonomy and controls that actors may adapt around.
-7. Read [`JD_TRACEABILITY.md`](JD_TRACEABILITY.md) for the public-role-to-repository mapping.
-
-## Four questions to keep in mind
-
-### 1. What should an analyst investigate now?
-
-Use the investigation queue, reason codes, entity/entitlement context and privacy-safe case evidence. A high score is a prioritization signal, not guilt.
-
-### 2. Is the evidence strong enough to change a rule or taxonomy?
-
-Use frozen evaluation, uncertainty/evidence-volume gates, historical replay, legitimate-user impact and adversarial-resilience checks. Small perfect-looking samples are not treated as sufficient evidence.
-
-### 3. Did a mitigation actually reduce harm?
-
-Use the synthetic control/shadow/canary experiment, ITT, placebo/negative controls, pre-trends, spillover/displacement and delayed review evidence. A targeted metric can fall while underlying behavior moves elsewhere.
-
-### 4. Can another team reconstruct the decision?
-
-Use the v1 operating artifacts:
-
-```text
-operating_control_registry.csv
-decision_lineage.csv
-data_lineage.csv
-operating_slo_scorecard.csv
-incident_replay_register.csv
-decision_audit_trail.csv
-evidence_package_index.csv
-release_readiness.json
-```
+## Architecture in one line
+`data contracts → detection/discovery → investigation → evidence/replay/resilience → controlled experiment → decision lineage/SLO/audit → human policy decision`
 
 ## Governance boundary
-
 No score, rule, cohort, experiment estimate, registry state or evidence package authorizes automatic enforcement or automatic policy expansion.
 
 The default analyst layer excludes raw prompts, completions, raw IPs, raw device identifiers, card numbers and payment details. Expanded sensitive-data review requires a separate approved access path.
 
 ## Reproduce the dynamic operating state
-
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -73,4 +78,4 @@ pip install -r requirements.txt
 python run_all.py --n-accounts 180 --seed 17
 ```
 
-The pipeline refreshes this file with current synthetic operating-state details, rebuilds `docs/index.html`, and generates the case-to-policy evidence packages.
+The pipeline refreshes this file, rebuilds `docs/index.html`, and regenerates case-to-policy evidence packages from the current synthetic run.
