@@ -15,18 +15,12 @@ def _group_map(account_ids: list[str], prefix: str, group_size: int = 3) -> dict
 
 
 def build_synthetic_entitlement_ledger(data_dir: str | Path, cycle_days: int = 28) -> pd.DataFrame:
-    """Build a separate privacy-safe synthetic billing/entitlement source.
-
-    Entitlement units use a benchmark contract independent of telemetry's legacy coarse limit field.
-    This avoids treating an event payload as the billing source of truth and makes cycle-pressure tests
-    meaningful while remaining explicitly synthetic.
-    """
+    """Build a separate privacy-safe synthetic billing/entitlement source."""
     data = Path(data_dir)
     accounts = pd.read_csv(data / "accounts.csv", keep_default_na=False).reset_index(drop=True)
     telemetry = pd.read_csv(data / "telemetry.csv", keep_default_na=False)
     telemetry["timestamp"] = pd.to_datetime(telemetry.timestamp, utc=True, format="mixed")
-    first_day = telemetry.timestamp.min().floor("D")
-    last_day = telemetry.timestamp.max().floor("D")
+    first_day = telemetry.timestamp.min().floor("D"); last_day = telemetry.timestamp.max().floor("D")
     primary_payment = telemetry.loc[telemetry.payment_hash.ne("")].groupby("account_id").payment_hash.first()
     plan_daily_units = {"free": 7, "individual": 14, "business": 22, "enterprise": 28}
 
@@ -36,14 +30,11 @@ def build_synthetic_entitlement_ledger(data_dir: str | Path, cycle_days: int = 2
     managed_shared_ids = managed_legit_ids[: min(12, len(managed_legit_ids))]
     managed_family = _group_map(managed_shared_ids, "synthetic-managed-shared-billing", group_size=3)
 
-    rows = []
-    cycle_start = first_day
-    cycle_index = 0
+    rows = []; cycle_start = first_day; cycle_index = 0
     while cycle_start <= last_day:
         cycle_end = min(cycle_start + pd.Timedelta(days=cycle_days - 1), last_day)
         for _, r in accounts.iterrows():
-            account_id = str(r.account_id)
-            payment = str(primary_payment.get(account_id, _hash(f"payment:{account_id}")))
+            account_id = str(r.account_id); payment = str(primary_payment.get(account_id, _hash(f"payment:{account_id}")))
             if account_id in quota_family:
                 billing_family = quota_family[account_id]; billing_context = "synthetic_linked_billing_for_quota_evasion"
             elif account_id in managed_family:
@@ -51,15 +42,12 @@ def build_synthetic_entitlement_ledger(data_dir: str | Path, cycle_days: int = 2
             else:
                 billing_family = payment; billing_context = "account_billing"
             rows.append({"account_id": account_id, "cycle_index": cycle_index, "cycle_start": cycle_start.date().isoformat(), "cycle_end": cycle_end.date().isoformat(), "plan": r.plan, "billing_status": r.billing_status, "entitlement_limit_per_active_day": plan_daily_units[str(r.plan)], "entitlement_contract_version": "synthetic-plan-contract-v1", "billing_family_ref": billing_family, "billing_context": billing_context, "managed_infrastructure": int(r.managed_infrastructure), "source_system": "synthetic_entitlement_ledger"})
-        cycle_start = cycle_start + pd.Timedelta(days=cycle_days)
-        cycle_index += 1
-    ledger = pd.DataFrame(rows)
-    ledger.to_csv(data / "entitlements.csv", index=False)
-    return ledger
+        cycle_start = cycle_start + pd.Timedelta(days=cycle_days); cycle_index += 1
+    ledger = pd.DataFrame(rows); ledger.to_csv(data / "entitlements.csv", index=False); return ledger
 
 
 def evaluate_entitlement_abuse(data_dir: str | Path, out_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Evaluate cycle pressure while preserving legitimate shared-billing explanations."""
+    """Evaluate cycle pressure while preserving explicit legitimate shared-billing explanations."""
     data, out = Path(data_dir), Path(out_dir); out.mkdir(parents=True, exist_ok=True)
     accounts = pd.read_csv(data / "accounts.csv", keep_default_na=False)
     telemetry = pd.read_csv(data / "telemetry.csv", keep_default_na=False)
@@ -79,7 +67,7 @@ def evaluate_entitlement_abuse(data_dir: str | Path, out_dir: str | Path) -> tup
         family_accounts=("account_id", "nunique"), combined_requests=("requests", "sum"), combined_allowance=("effective_allowance", "sum"), near_limit_accounts=("near_limit", "sum"), managed_share=("managed_infrastructure", "mean"), legitimate_shared_billing_accounts=("billing_context", lambda s: int((s == "managed_shared_billing").sum())), synthetic_linked_quota_accounts=("billing_context", lambda s: int((s == "synthetic_linked_billing_for_quota_evasion").sum())), benchmark_abuse_accounts=("ground_truth_abuse_type", lambda s: int((s != "legitimate").sum()))
     )
     family["family_usage_ratio"] = family.combined_requests / family.combined_allowance.clip(lower=1)
-    family["shared_billing_context"] = ((family.family_accounts >= 2) & ((family.legitimate_shared_billing_accounts >= 2) | (family.managed_share >= 0.80))).astype(int)
+    family["shared_billing_context"] = ((family.family_accounts >= 2) & (family.legitimate_shared_billing_accounts >= 2)).astype(int)
     family["candidate_multi_account_evasion"] = ((family.family_accounts >= 2) & (family.near_limit_accounts >= 2) & (family.shared_billing_context == 0)).astype(int)
     family["reason_codes"] = np.where(family.candidate_multi_account_evasion.eq(1), "multi_account_same_billing_family|simultaneous_entitlement_pressure", np.where(family.shared_billing_context.eq(1), "shared_billing_requires_enterprise_context_review", "no_multi_account_pressure"))
 
