@@ -65,10 +65,22 @@ jobs:
           test -s artifacts/policy_experiment_review_guardrails.csv
           test -s artifacts/policy_experiment_stopping_decision.json
           test -s artifacts/policy_experiment_benchmark.json
+          test -s artifacts/operating_control_registry.csv
+          test -s artifacts/decision_lineage.csv
+          test -s artifacts/data_lineage.csv
+          test -s artifacts/operating_slo_scorecard.csv
+          test -s artifacts/incident_replay_register.csv
+          test -s artifacts/decision_audit_trail.csv
+          test -s artifacts/evidence_package_index.csv
+          test -s artifacts/release_readiness.json
+          test -s artifacts/evidence_packages/PKG-001.md
           test -s data/entitlements.csv
           test -s data/hidden_novelty_manifest.csv
           test -s data/hidden_policy_experiment_manifest.csv
+          test -s docs/START_HERE.md
           test -s docs/index.html
+          grep -q "v1.0 Operating brief" docs/index.html
+          grep -q '"automatic_enforcement_allowed": false' artifacts/release_readiness.json
       - uses: actions/upload-artifact@v4
         with:
           name: trust-safety-decision-benchmark
@@ -79,6 +91,15 @@ jobs:
             artifacts/brief_trust_safety.md
             artifacts/brief_engineering.md
             artifacts/brief_cela_governance.md
+            artifacts/operating_control_registry.csv
+            artifacts/decision_lineage.csv
+            artifacts/data_lineage.csv
+            artifacts/operating_slo_scorecard.csv
+            artifacts/incident_replay_register.csv
+            artifacts/decision_audit_trail.csv
+            artifacts/evidence_package_index.csv
+            artifacts/evidence_packages/*.md
+            artifacts/release_readiness.json
             artifacts/slice_metrics.csv
             artifacts/review_capacity_scenarios.csv
             artifacts/emerging_trend_alerts.csv
@@ -130,4 +151,5 @@ jobs:
             artifacts/policy_threshold_recommendation.json
             data/hidden_novelty_manifest.csv
             data/hidden_policy_experiment_manifest.csv
+            docs/START_HERE.md
             docs/index.html
