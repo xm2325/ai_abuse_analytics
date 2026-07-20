@@ -34,6 +34,12 @@ jobs:
           test -s artifacts/detection_rule_registry.csv
           test -s artifacts/policy_threshold_frontier.csv
           test -s artifacts/policy_threshold_recommendation.json
+          test -s artifacts/historical_rule_replay.csv
+          test -s artifacts/historical_case_arrivals.csv
+          test -s artifacts/historical_rule_replay_summary.csv
+          test -s artifacts/rule_evidence_power.csv
+          test -s artifacts/queue_simulation_daily.csv
+          test -s artifacts/queue_simulation_summary.csv
           test -s docs/index.html
       - uses: actions/upload-artifact@v4
         with:
@@ -51,6 +57,12 @@ jobs:
             artifacts/data_quality_findings.csv
             artifacts/signal_integration_backlog.csv
             artifacts/rule_shadow_evaluation.csv
+            artifacts/rule_evidence_power.csv
+            artifacts/historical_rule_replay.csv
+            artifacts/historical_rule_replay_summary.csv
+            artifacts/historical_case_arrivals.csv
+            artifacts/queue_simulation_daily.csv
+            artifacts/queue_simulation_summary.csv
             artifacts/review_feedback_metrics.csv
             artifacts/enforcement_safety_metrics.csv
             artifacts/mitigation_evaluation.csv
