@@ -20,6 +20,7 @@ from .investigate import build_investigation_queue, build_linked_account_compone
 from .mitigation import evaluate_mitigation
 from .monitoring import build_daily_monitor
 from .operating_layer import build_operating_layer
+from .operating_report import build_start_here, enhance_decision_center
 from .policy_experiment import evaluate_policy_experiment
 from .reporting import build_dashboard, build_executive_brief
 from .rules import evaluate_shadow_rules
@@ -92,6 +93,8 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     operating=build_operating_layer(data,art,action_register)
     build_stakeholder_briefs(action_register,review_feedback,signal_backlog,art)
     build_dashboard(scores,metrics,slices,coverage,mitigation,mitigation_daily,daily_monitor,alerts,dq,rules,review_feedback,action_register,review_capacity,drift,calibration,queue_sla,queue_capacity,rule_registry,docs/"index.html")
+    enhance_decision_center(docs/"index.html",art)
+    build_start_here(docs/"START_HERE.md",art)
     build_executive_brief(scores,metrics,slices,coverage,mitigation,alerts,dq,review_capacity,rules,art/"executive_brief.md")
     return metrics
 
