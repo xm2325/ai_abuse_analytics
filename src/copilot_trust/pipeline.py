@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from .adversarial_stress import build_evasion_regression_gates, evaluate_adversarial_adaptation
 from .data_quality import build_signal_backlog, run_data_contracts
@@ -42,6 +43,14 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     entitlement_usage,billing_families,entitlement_queue,entitlement_dq=evaluate_entitlement_abuse(data,art)
     rules=evaluate_shadow_rules(scores,art); rule_evidence=evaluate_rule_evidence_power(rules,art); rule_registry=build_rule_registry(rules,art,rule_evidence)
     adversarial_stress,defense_stress,adversarial_summary=evaluate_adversarial_adaptation(scores,art)
+    # Keep backward-compatible summary keys for downstream briefs while making target-scenario
+    # recall the primary single-rule brittleness metric.
+    worst_rule=adversarial_summary.get("worst_single_rule",{})
+    if worst_rule:
+        worst_rule["baseline_recall"]=worst_rule.get("baseline_target_recall",worst_rule.get("baseline_overall_recall"))
+        worst_rule["adapted_recall"]=worst_rule.get("adapted_target_recall",worst_rule.get("adapted_overall_recall"))
+        worst_rule["recall_drop"]=worst_rule.get("target_recall_drop",worst_rule.get("overall_recall_drop",0.0))
+        (art/"adversarial_stress_summary.json").write_text(json.dumps(adversarial_summary,indent=2))
     evasion_gates=build_evasion_regression_gates(adversarial_stress,defense_stress,art)
     drift,calibration=evaluate_drift(scores,art)
     queue_sla,queue_capacity=evaluate_queue_operations(scores,data,art); simulate_threshold_policy(scores,art)
