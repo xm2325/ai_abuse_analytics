@@ -22,11 +22,13 @@ from .queue_simulation import simulate_queue_capacity
 from .policy_simulation import simulate_threshold_policy
 from .scoring import train_and_score
 from .stakeholder import build_action_register, build_stakeholder_briefs
+from .synthetic_controls import inject_legitimate_entity_confounders
 
 
 def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     root=Path(root); data=root/"data"; art=root/"artifacts"; docs=root/"docs"
     generate_synthetic_telemetry(data,SyntheticConfig(n_accounts=n_accounts,seed=seed))
+    inject_legitimate_entity_confounders(data)
     build_synthetic_entitlement_ledger(data)
     build_feature_mart(data,art/"account_feature_mart.csv")
     scores,metrics=train_and_score(art/"account_feature_mart.csv",art,seed=seed)
