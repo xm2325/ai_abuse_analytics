@@ -44,7 +44,15 @@ jobs:
           test -s artifacts/billing_family_risk.csv
           test -s artifacts/entitlement_investigation_queue.csv
           test -s artifacts/entitlement_data_quality.csv
+          test -s artifacts/emerging_novelty_accounts.csv
+          test -s artifacts/emerging_behavior_cohorts.csv
+          test -s artifacts/emerging_graph_triage.csv
+          test -s artifacts/candidate_taxonomy_proposals.csv
+          test -s artifacts/novel_shadow_rule_candidates.csv
+          test -s artifacts/novelty_incident_diagnostics.csv
+          test -s artifacts/emerging_discovery_benchmark.json
           test -s data/entitlements.csv
+          test -s data/hidden_novelty_manifest.csv
           test -s docs/index.html
       - uses: actions/upload-artifact@v4
         with:
@@ -61,6 +69,14 @@ jobs:
             artifacts/emerging_trend_alerts.csv
             artifacts/data_quality_findings.csv
             artifacts/signal_integration_backlog.csv
+            artifacts/emerging_novelty_accounts.csv
+            artifacts/emerging_behavior_cohorts.csv
+            artifacts/emerging_graph_edges.csv
+            artifacts/emerging_graph_triage.csv
+            artifacts/candidate_taxonomy_proposals.csv
+            artifacts/novel_shadow_rule_candidates.csv
+            artifacts/novelty_incident_diagnostics.csv
+            artifacts/emerging_discovery_benchmark.json
             artifacts/rule_shadow_evaluation.csv
             artifacts/rule_evidence_power.csv
             artifacts/historical_rule_replay.csv
@@ -83,4 +99,5 @@ jobs:
             artifacts/detection_rule_registry.csv
             artifacts/policy_threshold_frontier.csv
             artifacts/policy_threshold_recommendation.json
+            data/hidden_novelty_manifest.csv
             docs/index.html
