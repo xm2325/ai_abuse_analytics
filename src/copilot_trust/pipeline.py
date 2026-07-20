@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import pandas as pd
 from .adversarial_stress import build_evasion_regression_gates, evaluate_adversarial_adaptation
 from .data_quality import build_signal_backlog, run_data_contracts
 from .drift import evaluate_drift
@@ -61,8 +62,28 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
         worst_rule["baseline_recall"]=worst_rule.get("baseline_target_recall",worst_rule.get("baseline_overall_recall"))
         worst_rule["adapted_recall"]=worst_rule.get("adapted_target_recall",worst_rule.get("adapted_overall_recall"))
         worst_rule["recall_drop"]=worst_rule.get("target_recall_drop",worst_rule.get("overall_recall_drop",0.0))
+        target_n=int(worst_rule.get("target_accounts_holdout",0) or 0)
+        worst_rule["evidence_volume_status"]="sufficient_for_stress_claim" if target_n>=3 else "limited_evidence_fragility_hypothesis"
+        worst_rule["evidence_volume_note"]=(
+            "Target-scenario stress has at least 3 holdout accounts; still treat as synthetic diagnostic, not production evidence."
+            if target_n>=3 else
+            f"Only {target_n} target-scenario holdout account(s); treat the observed recall drop as a fragility hypothesis and expand time-based replay before policy conclusions."
+        )
         (art/"adversarial_stress_summary.json").write_text(json.dumps(adversarial_summary,indent=2))
     evasion_gates=build_evasion_regression_gates(adversarial_stress,defense_stress,art)
+    # Evidence-volume gate prevents a dramatic percentage drop on n=1 or n=2 from being
+    # presented as a stable resilience estimate.
+    if worst_rule:
+        target_n=int(worst_rule.get("target_accounts_holdout",0) or 0)
+        evidence_gate=pd.DataFrame([{
+            "gate":"target_stress_evidence_volume",
+            "observed":target_n,
+            "guardrail":">= 3 target-scenario holdout accounts",
+            "status":"pass" if target_n>=3 else "warn",
+            "action":"if warning, treat brittleness as a hypothesis; expand time-based replay/holdout evidence before policy claims or P0 escalation",
+        }])
+        evasion_gates=pd.concat([evasion_gates,evidence_gate],ignore_index=True)
+        evasion_gates.to_csv(art/"evasion_regression_gates.csv",index=False)
     drift,calibration=evaluate_drift(scores,art)
     queue_sla,queue_capacity=evaluate_queue_operations(scores,data,art); simulate_threshold_policy(scores,art)
     replay,replay_arrivals,replay_summary=build_historical_replay(data,art); queue_sim_daily,queue_sim_summary=simulate_queue_capacity(replay_arrivals,art)
