@@ -51,6 +51,10 @@ jobs:
           test -s artifacts/novel_shadow_rule_candidates.csv
           test -s artifacts/novelty_incident_diagnostics.csv
           test -s artifacts/emerging_discovery_benchmark.json
+          test -s artifacts/adversarial_rule_stress.csv
+          test -s artifacts/defense_in_depth_stress.csv
+          test -s artifacts/adversarial_stress_summary.json
+          test -s artifacts/evasion_regression_gates.csv
           test -s data/entitlements.csv
           test -s data/hidden_novelty_manifest.csv
           test -s docs/index.html
@@ -77,6 +81,10 @@ jobs:
             artifacts/novel_shadow_rule_candidates.csv
             artifacts/novelty_incident_diagnostics.csv
             artifacts/emerging_discovery_benchmark.json
+            artifacts/adversarial_rule_stress.csv
+            artifacts/defense_in_depth_stress.csv
+            artifacts/adversarial_stress_summary.json
+            artifacts/evasion_regression_gates.csv
             artifacts/rule_shadow_evaluation.csv
             artifacts/rule_evidence_power.csv
             artifacts/historical_rule_replay.csv

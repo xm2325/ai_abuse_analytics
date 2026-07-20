@@ -38,6 +38,7 @@ def build_dashboard(scores, metrics, slices, coverage, mitigation, mitigation_da
     billing = _optional_csv(art / "billing_family_risk.csv"); entitlement_queue = _optional_csv(art / "entitlement_investigation_queue.csv"); entitlement_dq = _optional_csv(art / "entitlement_data_quality.csv")
     novelty = _optional_csv(art / "emerging_novelty_accounts.csv"); cohorts = _optional_csv(art / "emerging_behavior_cohorts.csv"); graph_triage = _optional_csv(art / "emerging_graph_triage.csv")
     taxonomy = _optional_csv(art / "candidate_taxonomy_proposals.csv"); novelty_incident = _optional_csv(art / "novelty_incident_diagnostics.csv"); discovery_benchmark = _optional_json(art / "emerging_discovery_benchmark.json")
+    adversarial = _optional_csv(art / "adversarial_rule_stress.csv"); defense = _optional_csv(art / "defense_in_depth_stress.csv"); evasion_gates = _optional_csv(art / "evasion_regression_gates.csv"); adversarial_summary = _optional_json(art / "adversarial_stress_summary.json")
 
     holdout = scores[scores.split.eq("holdout")].copy()
     risk_fig = px.histogram(holdout, x="risk_score", color="label", nbins=24, barmode="overlay", title="Holdout risk distribution")
@@ -58,6 +59,8 @@ def build_dashboard(scores, metrics, slices, coverage, mitigation, mitigation_da
     else: power_fig = go.Figure()
     entitlement_fig = px.scatter(billing, x="family_accounts", y="family_usage_ratio", size="near_limit_accounts", color="shared_billing_context", hover_name="billing_family_ref", hover_data=["cycle_index", "candidate_multi_account_evasion", "reason_codes"], title="Billing-family entitlement pressure") if len(billing) else go.Figure()
     novelty_fig = px.scatter(novelty, x="token_rotation_delta", y="surface_switch_delta", size="novelty_score", color="cohort_id", hover_name="account_id", hover_data=[c for c in ["known_detection_flagged", "known_risk_score", "triage_status"] if c in novelty.columns], title="Unknown-pattern discovery: token rotation × surface switching") if len(novelty) else go.Figure()
+    adversarial_fig = px.line(adversarial, x="adaptation_strength", y="adapted_recall", color="rule_name", line_dash="strategy", markers=True, title="Frozen-rule recall under synthetic adaptive behavior") if len(adversarial) else go.Figure()
+    defense_fig = px.line(defense, x="adaptation_strength", y="adapted_recall", color="strategy", markers=True, title="Defense-in-depth diagnostic under adaptation") if len(defense) else go.Figure()
 
     worst_fpr = float(reportable.false_positive_rate.max()) if len(reportable) else float(slices.false_positive_rate.max()) if len(slices) else 0.0
     top10 = review_capacity.iloc[(review_capacity.review_capacity_share - 0.10).abs().argmin()] if len(review_capacity) else None
@@ -67,12 +70,16 @@ def build_dashboard(scores, metrics, slices, coverage, mitigation, mitigation_da
     one_fte = queue_sim.iloc[(queue_sim.analyst_fte - 1.0).abs().argmin()] if len(queue_sim) else None
     candidate_families = int(billing.candidate_multi_account_evasion.sum()) if len(billing) and "candidate_multi_account_evasion" in billing else 0
     hidden_recall = discovery_benchmark.get("hidden_recall_at_candidate_set")
+    worst_single_drop = adversarial_summary.get("worst_single_rule", {}).get("recall_drop")
+    worst_defense_drop = adversarial_summary.get("worst_defense_in_depth", {}).get("recall_drop")
     cards = [
         ("Holdout AP", f"{metrics['average_precision']:.3f}"),
         ("Top-10% review precision", _pct(top10.precision_at_capacity) if top10 is not None else "n/a"),
         ("Worst reportable FPR", _pct(worst_fpr)),
         ("Novel behavior cohorts", str(len(cohorts))),
         ("Hidden novelty recall*", _pct(hidden_recall) if hidden_recall is not None else "n/a"),
+        ("Worst single-rule recall drop*", _pct(worst_single_drop) if worst_single_drop is not None else "n/a"),
+        ("Worst defense recall drop*", _pct(worst_defense_drop) if worst_defense_drop is not None else "n/a"),
         ("Evidence-ready rules", str(evidence_ready)),
         ("Candidate billing families", str(candidate_families)),
         ("1-FTE final replay backlog", str(int(one_fte.final_backlog)) if one_fte is not None else "n/a"),
@@ -82,8 +89,9 @@ def build_dashboard(scores, metrics, slices, coverage, mitigation, mitigation_da
     css = """body{font-family:Inter,system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:0}.wrap{max-width:1280px;margin:auto;padding:32px}h1,h2{letter-spacing:-.02em}h2{margin-top:46px;border-top:1px solid #30363d;padding-top:26px}.sub,.muted{color:#8b949e}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:18px}.card span{display:block;color:#8b949e;font-size:13px}.card strong{display:block;font-size:28px;margin-top:8px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:18px}.panel{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px;overflow:auto}.data-table{border-collapse:collapse;width:100%;font-size:13px}.data-table th,.data-table td{border-bottom:1px solid #30363d;padding:9px;text-align:left}.data-table th{color:#8b949e}.note{border-left:4px solid #58a6ff;padding:12px 16px;background:#161b22}.danger{border-left-color:#f85149}code{color:#79c0ff}"""
     page = f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>AI Abuse Analytics Decision Center</title><style>{css}</style></head><body><main class='wrap'>
     <h1>AI Abuse Analytics Decision Center</h1><p class='sub'>Privacy-safe synthetic benchmark for AI developer-tool Trust & Safety analytics. Scores, novelty cohorts, billing-family signals, and rules prioritize investigation; they do not authorize automatic enforcement.</p><div class='cards'>{cards_html}</div>
-    <p class='muted'>* Hidden novelty recall is benchmark-only validation. The hidden manifest is never used by discovery or ranking.</p>
-    <h2>What needs a decision now?</h2><div class='panel'>{_table_html(action_register,10)}</div>
+    <p class='muted'>* Hidden novelty recall and adversarial recall degradation are synthetic benchmark diagnostics only. They do not describe a real product control.</p>
+    <h2>What needs a decision now?</h2><div class='panel'>{_table_html(action_register,12)}</div>
+    <h2>Adversarial adaptation / detection resilience</h2><div class='grid'><div class='panel'>{_fig_html(adversarial_fig)}</div><div class='panel'>{_fig_html(defense_fig)}</div><div class='panel'><h3>Evasion regression gates</h3>{_table_html(evasion_gates,10)}</div><div class='panel'><h3>Largest rule degradations</h3>{_table_html(adversarial.sort_values('recall_drop',ascending=False).head(12) if len(adversarial) else adversarial,12)}</div></div><p class='note danger'><strong>Defensive boundary:</strong> this is a coarse synthetic resilience stress test. It does not reproduce real production thresholds or provide a bypass procedure. Material degradation routes a rule to rework, independent-signal development, canary/replay, and rollback review.</p>
     <h2>Unknown / emerging abuse discovery</h2><div class='grid'><div class='panel'>{_fig_html(novelty_fig)}</div><div class='panel'><h3>Behavior cohorts</h3>{_table_html(cohorts,12)}</div><div class='panel'><h3>Candidate taxonomy proposals</h3>{_table_html(taxonomy,12)}</div><div class='panel'><h3>Graph/context triage</h3>{_table_html(graph_triage,12)}</div><div class='panel'><h3>Novelty vs telemetry incident</h3>{_table_html(novelty_incident,10)}</div></div><p class='note'>Discovery uses recent-vs-baseline behavior changes and does not read hidden benchmark labels. A novel cohort becomes a taxonomy proposal and candidate shadow definition only after telemetry-health and legitimate-integration review.</p>
     <h2>Emerging known-signal trends</h2><div class='grid'><div class='panel'>{_fig_html(trend_fig)}</div><div class='panel'><h3>Alerts</h3>{_table_html(alerts,10)}</div></div>
     <h2>Historical replay and rule evidence</h2><div class='grid'><div class='panel'>{_fig_html(replay_fig)}</div><div class='panel'>{_fig_html(power_fig)}</div><div class='panel'><h3>Replay summary</h3>{_table_html(replay_summary,12)}</div><div class='panel'><h3>Evidence sufficiency</h3>{_table_html(power,12)}</div></div><p class='note'>Replay checkpoints exclude future events. Small observed FPR is not treated as safe until uncertainty bounds and evidence volume also pass.</p>
@@ -106,8 +114,11 @@ def build_executive_brief(scores, metrics, slices, coverage, mitigation, alerts,
     cap = review_capacity.iloc[(review_capacity.review_capacity_share - 0.10).abs().argmin()] if len(review_capacity) else None; mit = mitigation.iloc[0] if len(mitigation) else None
     power = _optional_csv(art / "rule_evidence_power.csv"); queue_sim = _optional_csv(art / "queue_simulation_summary.csv"); billing = _optional_csv(art / "billing_family_risk.csv")
     cohorts = _optional_csv(art / "emerging_behavior_cohorts.csv"); discovery_benchmark = _optional_json(art / "emerging_discovery_benchmark.json"); incident = _optional_csv(art / "novelty_incident_diagnostics.csv")
+    adversarial_summary = _optional_json(art / "adversarial_stress_summary.json"); evasion_gates = _optional_csv(art / "evasion_regression_gates.csv")
     evidence_ready = int(power.evidence_sufficient_for_policy_review.sum()) if len(power) else 0; one_fte = queue_sim.iloc[(queue_sim.analyst_fte - 1.0).abs().argmin()] if len(queue_sim) else None; candidate_families = int(billing.candidate_multi_account_evasion.sum()) if len(billing) and "candidate_multi_account_evasion" in billing else 0
     hidden_recall = discovery_benchmark.get("hidden_recall_at_candidate_set"); incident_status = "clear" if len(incident) and not incident.status.eq("possible_data_incident").any() else "review telemetry health first"
+    worst_rule = adversarial_summary.get("worst_single_rule", {}); worst_defense = adversarial_summary.get("worst_defense_in_depth", {})
+    gate_warnings = int(evasion_gates.status.eq("warn").sum()) if len(evasion_gates) else 0; gate_failures = int(evasion_gates.status.eq("fail").sum()) if len(evasion_gates) else 0
     text = f"""# Executive brief
 
 ## Decision summary
@@ -116,6 +127,11 @@ The benchmark is designed for investigation prioritization, not automatic enforc
 At approximately 10% review capacity, benchmark precision is **{cap.precision_at_capacity:.1%}** and known-abuse recall is **{cap.known_abuse_recall_at_capacity:.1%}**.
 
 The highest reportable legitimate-user impact slice is **{worst_text}**. This should trigger confounder review before threshold or policy changes.
+
+## Adversarial adaptation / rule resilience
+{f"The largest synthetic single-rule recall degradation is **{float(worst_rule.get('recall_drop',0)):.1%}** for **{worst_rule.get('rule_name')}** under **{worst_rule.get('strategy')}**. The worst defense-in-depth diagnostic drop is **{float(worst_defense.get('recall_drop',0)):.1%}**." if worst_rule else "No adversarial stress result is available."}
+
+Evasion regression gates: **{gate_failures} failures**, **{gate_warnings} warnings**. Material degradation should trigger rule rework, independent-signal development, canary/replay, and rollback review rather than silent threshold tuning.
 
 ## Unknown / emerging abuse discovery
 The unsupervised recent-vs-baseline workflow produced **{len(cohorts)}** behavior cohorts. Telemetry-health screen: **{incident_status}**. {f"Benchmark-only hidden-pattern recall in the candidate set is **{hidden_recall:.1%}**; hidden labels are never used for ranking or clustering." if hidden_recall is not None else "No hidden-pattern benchmark result is available."}
@@ -140,11 +156,12 @@ This is synthetic observational analysis and is not causal proof.
 
 ## Operating boundaries
 - Use scores, novelty cohorts, billing-family signals, and candidate rules to prioritize human investigation.
+- Treat adversarial stress as a resilience diagnostic, not a bypass guide or production threshold disclosure.
 - Separate behavioral novelty from telemetry/data incidents before creating a taxonomy proposal.
 - Never use hidden benchmark labels in discovery, clustering, graph triage, or candidate-rule definition.
 - Validate telemetry and entitlement-ledger contracts before retuning detection.
 - Treat IP or shared billing context as supporting evidence, not identity or abuse proof.
-- Require independent replay, matured labels, uncertainty bounds, legitimate-integration review, and queue-capacity checks before rule promotion.
+- Require independent replay, matured labels, uncertainty bounds, legitimate-integration review, capacity checks, and resilience stress before rule promotion.
 - Feed cleared cases, appeals, and overturns back into threshold, taxonomy, and rule review.
 - Use a separate approved path for raw-content or expanded identity review.
 """

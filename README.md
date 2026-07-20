@@ -2,15 +2,13 @@
 
 A privacy-safe, reproducible Trust & Safety analytics workbench for AI developer-tool abuse investigation.
 
-> **Portfolio scope:** this is an independent synthetic project inspired by analytical problems in a public GitHub Data Analyst role supporting Copilot Trust & Safety. It does not use GitHub internal data, rules, taxonomies, policy logic, prompts, completions, or production systems.
+> **Portfolio scope:** this is an independent synthetic project inspired by analytical problems in a public GitHub Data Analyst role supporting Copilot Trust & Safety. It does not use GitHub internal data, rules, taxonomies, production thresholds, prompts, completions, or enforcement systems.
 
 ## Executive summary
 
 The project starts from operating decisions rather than a model leaderboard:
 
-> With limited analyst capacity, which accounts or account families should be investigated first, what benign explanations could produce the same signals, can we detect a new abuse pattern that is not yet in the taxonomy, and is there enough evidence to change a detection or mitigation policy?
-
-The workbench models the full decision loop:
+> With limited analyst capacity, which accounts should be investigated first, what benign explanations could produce the same signals, can we detect previously unknown abuse, will our controls survive adaptive behavior, and is there enough evidence to change a rule or policy?
 
 ```text
 privacy-safe telemetry + account + entitlement sources
@@ -23,9 +21,11 @@ SQL feature marts + conservative entity linkage
         ↓
 risk / anomaly / behavior cohorts / candidate rules
         ↓
-false-positive, calibration, evidence-volume and uncertainty checks
+false-positive, calibration, uncertainty and evidence-volume checks
         ↓
-historical replay + shadow / canary / rollback gates
+historical replay + adversarial adaptation stress
+        ↓
+shadow / canary / rollback gates
         ↓
 investigation queue + linked-account + billing-family evidence
         ↓
@@ -36,7 +36,7 @@ mitigation measurement + analyst-capacity stress testing
 rule / threshold / taxonomy / data-integration revision
 ```
 
-The default analyst layer does **not** expose raw prompts, completions, IP addresses, raw device identifiers, card numbers, or payment details. Scores, novelty cohorts, rules, and billing-family signals prioritize human investigation; they never authorize automatic enforcement.
+The default analyst layer does **not** expose raw prompts, completions, IP addresses, raw device identifiers, card numbers, or payment details. Scores, novelty cohorts, rules, billing-family signals, and stress-test results prioritize human analysis; they never authorize automatic enforcement.
 
 ## What real work questions does it answer?
 
@@ -50,179 +50,184 @@ The default analyst layer does **not** expose raw prompts, completions, IP addre
 | Is novelty actually a telemetry incident? | recent-vs-baseline signal-health diagnostics | creating an abuse theory because instrumentation changed |
 | Is a new rule ready? | shadow evaluation, uncertainty bounds, evidence-volume gate | `precision=100%` on two cases = safe |
 | Did a rule still work later? | no-lookahead historical replay | random holdout hides temporal failure |
+| Will the rule survive adaptive behavior? | adversarial rule stress + defense-in-depth diagnostic | assuming users remain static after controls appear |
 | Can the team operationalize it? | queue arrival/service simulation | accurate rule creates unmanageable backlog |
 | Did mitigation work? | DiD-style diagnostic, bootstrap interval, pre-trend checks | before/after movement = causal proof |
 | Are legitimate users being harmed? | FPR/FNR slices, appeals, overturns, label maturity | ignoring delayed negative feedback |
+
+# v0.8 — Adversarial adaptation and detection-resilience stress testing
+
+Static holdout performance is not enough for abuse detection. Actors may change behavior after limits, rules, reviews, or mitigations become visible.
+
+v0.8 freezes current rule definitions and applies coarse synthetic adaptation scenarios to known-abuse holdout accounts.
+
+## Stress families
+
+```text
+velocity_smoothing
+identity_fragmentation
+token_rotation
+quota_spreading
+policy_signal_suppression
+multi_signal_blending
+```
+
+Each is evaluated at four synthetic strengths:
+
+```text
+25% / 50% / 75% / 100%
+```
+
+These percentages are scenario parameters, not estimates of attacker capability.
+
+## Core outputs
+
+```text
+artifacts/adversarial_rule_stress.csv
+artifacts/defense_in_depth_stress.csv
+artifacts/adversarial_stress_summary.json
+artifacts/evasion_regression_gates.csv
+```
+
+The analysis measures:
+
+- baseline vs adapted recall;
+- recall degradation by rule family;
+- precision / FPR / review-workload changes;
+- worst brittle rule;
+- diversified multi-rule resilience;
+- release-style regression gates.
+
+## Why freeze the rules?
+
+The stress test does **not** re-fit thresholds after behavior changes.
+
+```text
+frozen rule definition
+        ↓
+synthetic adaptation
+        ↓
+measure degradation
+```
+
+This answers the real question:
+
+> How brittle is the control we already deployed or are considering widening?
+
+It does not let the rule silently move after seeing the stress data.
+
+## Defense-in-depth
+
+A diagnostic union of independent frozen rule families is compared with single-rule behavior.
+
+This does **not** claim a production ensemble policy. It tests whether diversified signals degrade more gracefully than one deterministic indicator.
+
+If a single rule collapses under one adaptation family but the broader signal set retains coverage, the operating response is:
+
+```text
+identify brittle dependency
+        ↓
+add independent corroborating signals
+        ↓
+shadow / replay
+        ↓
+canary with user-impact + capacity guardrails
+        ↓
+rollback if resilience degrades materially
+```
+
+## Evasion regression gates
+
+`evasion_regression_gates.csv` includes checks such as:
+
+- brittleness must be measured and surfaced;
+- defense-in-depth must not degrade worse than the most brittle single rule;
+- severe-adaptation scenarios have a diagnostic recall floor.
+
+A warning does not trigger automatic threshold tuning. It routes the control back to analysis, signal development, canary/replay, and rollback review.
+
+See `docs/ADVERSARIAL_ADAPTATION.md` and `sql/11_adversarial_rule_resilience.sql`.
 
 # v0.7 — Unknown / emerging abuse discovery
 
 Known-rule monitoring cannot find every new abuse pattern. v0.7 adds a separate discovery path for behaviors that are **not represented in the current taxonomy**.
 
-## Hidden-pattern benchmark without label leakage
-
-The synthetic benchmark injects a late pattern called internally:
+A benchmark-only hidden pattern is injected, but discovery cannot read its manifest. The system uses recent-vs-baseline behavior changes, robust novelty scoring, clustering, telemetry-health checks, graph/context triage, and analyst taxonomy proposals.
 
 ```text
-surface_hopping_token_rotation
-```
-
-The hidden pattern is deliberately designed not to match existing shortcuts:
-
-- modest rather than extreme request growth;
-- no policy-signal spike;
-- no shared token across accounts;
-- stable device/IP identity;
-- abrupt model-surface switching;
-- rapid per-account token rotation.
-
-A benchmark-only file records which accounts received the hidden pattern:
-
-```text
-data/hidden_novelty_manifest.csv
-```
-
-**The discovery system never reads this manifest.** It is only used after outputs are fixed to measure synthetic recovery.
-
-## Discovery workflow
-
-```text
-account-day behavior
-        ↓
-baseline 28-day window vs recent 10-day window
-        ↓
-robust multivariate change scores
-        ↓
+account behavior
+    ↓
+recent vs baseline change
+    ↓
 novelty candidate set
-        ↓
-behavior cohort clustering
-        ↓
-telemetry-health screen
-        ↓
-entity/context graph triage
-        ↓
-candidate taxonomy proposal
-        ↓
-analyst competing-explanation review
-        ↓
-development-only candidate shadow definition
-        ↓
-independent replay + matured labels + uncertainty + capacity review
+    ↓
+behavior cohorts
+    ↓
+telemetry incident screen
+    ↓
+graph/context triage
+    ↓
+candidate taxonomy
+    ↓
+independent shadow replay required
 ```
 
 Main outputs:
 
 ```text
-artifacts/emerging_novelty_accounts.csv
-artifacts/emerging_behavior_cohorts.csv
-artifacts/emerging_graph_edges.csv
-artifacts/emerging_graph_triage.csv
-artifacts/candidate_taxonomy_proposals.csv
-artifacts/novel_shadow_rule_candidates.csv
-artifacts/novelty_incident_diagnostics.csv
-artifacts/emerging_discovery_benchmark.json
+emerging_novelty_accounts.csv
+emerging_behavior_cohorts.csv
+emerging_graph_triage.csv
+candidate_taxonomy_proposals.csv
+novel_shadow_rule_candidates.csv
+emerging_discovery_benchmark.json
 ```
 
-### Novelty is not an abuse finding
-
-A new behavior cohort can be caused by:
-
-- product launches;
-- approved integrations;
-- SDK retry behavior;
-- enterprise automation;
-- client migrations;
-- telemetry regressions;
-- genuinely new abuse.
-
-Therefore the output is:
-
-```text
-analyst_taxonomy_review_required
-```
-
-not:
-
-```text
-confirmed abuse
-```
-
-A generated rule stops at:
-
-```text
-independent_shadow_replay_required
-```
-
-and `automatic_enforcement_allowed = false`.
+Novelty is not an abuse finding. Product launches, SDK changes, enterprise automation, migrations, integrations, or telemetry regressions can produce similar behavior.
 
 See `docs/EMERGING_ABUSE_DISCOVERY.md` and `sql/10_emerging_abuse_discovery.sql`.
 
 # v0.6 — Billing and entitlement abuse analytics
 
-Telemetry is not treated as the billing source of truth.
-
-The project creates a separate synthetic entitlement ledger:
+Telemetry is not treated as the billing source of truth. The project creates a separate synthetic entitlement ledger and aligns usage to entitlement cycles before analyzing multi-account pressure.
 
 ```text
 data/entitlements.csv
-```
-
-and aligns usage to entitlement cycles before analyzing multi-account pressure.
-
-Outputs:
-
-```text
+        ↓
 entitlement_cycle_usage.csv
+        ↓
 billing_family_risk.csv
+        ↓
 entitlement_investigation_queue.csv
-entitlement_data_quality.csv
 ```
 
-A candidate billing family requires multiple linked accounts under simultaneous entitlement pressure. Even then it is only an investigation lead.
-
-Legitimate managed/shared organization billing families are explicitly represented as competing explanations and must not be classified as quota evasion solely because they share billing context.
+Legitimate managed/shared organization billing is explicitly represented as a competing explanation.
 
 See `docs/BILLING_ENTITLEMENT_INVESTIGATION.md` and `sql/09_entitlement_evasion_investigation.sql`.
 
-# v0.5 — Time-based validation and evidence sufficiency
+# v0.5 — Time-based validation, evidence power and queue stress
 
 ## No-lookahead historical replay
 
-`historical_rule_replay.csv` evaluates rules at historical checkpoints using only events available up to each checkpoint.
-
-Distribution-derived thresholds are frozen before holdout/replay use, removing silent evaluation-data adaptation.
+Rules are evaluated at historical checkpoints using only data available up to that checkpoint.
 
 ## Delayed labels
 
-Review outcomes are not assumed to exist immediately. Replay tracks matured-label coverage so unresolved cases are not silently treated as negatives.
+Unresolved or immature review outcomes are not silently treated as negatives.
 
-## Rule evidence power
+## Evidence power
 
-`rule_evidence_power.csv` reports:
+The system reports point estimates plus one-sided uncertainty bounds and trigger volume. A rule can show zero observed false positives and still remain in `shadow_more_evidence` when the sample is too small.
 
-```text
-observed FPR
-one-sided 95% FPR upper bound
-observed precision
-one-sided 95% precision lower bound
-trigger volume
-evidence sufficiency
-```
+## Queue stress
 
-A rule can have zero observed false positives and still remain in `shadow_more_evidence` when the sample is too small.
-
-## Queue stress testing
-
-`queue_simulation_summary.csv` tests synthetic 0.5, 1.0, and 2.0 analyst-FTE scenarios using case arrival time, priority, risk proxy, and review effort.
-
-It reports backlog, SLA breaches, utilization, and p95 time-to-review.
+Synthetic 0.5, 1.0, and 2.0 analyst-FTE scenarios report backlog, SLA breaches, utilization, and p95 review time.
 
 See `docs/HISTORICAL_REPLAY_AND_EVIDENCE.md` and `sql/08_historical_rule_replay.sql`.
 
-# Detection, investigation, and governance layers
+# Detection, investigation and governance layers
 
-## Synthetic known abuse scenarios
-
-The benchmark includes:
+## Synthetic known-abuse scenarios
 
 - scripted automation;
 - credential sharing;
@@ -231,27 +236,21 @@ The benchmark includes:
 - coordinated abuse;
 - policy/prompt-injection-related signals.
 
-For sufficiently large benchmark samples, CI guarantees minimum coverage of all six scenarios rather than allowing a random seed to omit a JD-relevant case.
-
-## Legitimate confounders
-
-The benchmark deliberately includes:
+## Deliberately difficult legitimate controls
 
 - high-intensity power users;
-- security-research behavior with elevated safety signals;
+- security-research behavior;
 - shared enterprise/network infrastructure;
 - approved organization contexts with legitimate shared token/payment/runner entities.
 
 Approved-organization context is available to investigators but excluded from model features, preventing it from becoming a label shortcut.
 
-## Conservative linked-account analysis
-
-Entity overlap does not have one meaning:
+## Conservative entity linkage
 
 | Entity | Analytical treatment |
 |---|---|
-| token fingerprint | strong supporting linkage, lifecycle/context still required |
-| payment fingerprint | strong supporting linkage, ownership/billing context required |
+| token fingerprint | strong supporting linkage; lifecycle/context still required |
+| payment fingerprint | strong supporting linkage; ownership/billing context required |
 | device fingerprint | useful with corroboration |
 | IP context | supporting context only |
 
@@ -259,44 +258,25 @@ IP-only overlap never proves common control because NAT, VPNs, enterprise egress
 
 ## Threshold policy guardrails
 
-`policy_threshold_frontier.csv` evaluates human-review thresholds against:
-
-- global false-positive rate;
-- review-capacity share;
-- worst reportable slice FPR;
-- minimum precision;
-- minimum evidence volume.
-
-The system may return:
+The project can explicitly return:
 
 ```text
 no_threshold_meets_all_guardrails
 ```
 
-instead of forcing a recommendation.
+instead of forcing a recommendation when FPR, review capacity, worst-slice impact, precision, or evidence volume are inadequate.
 
 ## Review → appeal → overturn feedback
 
-Synthetic case management includes review outcomes, enforcement actions, appeals, overturns, decision latency, taxonomy version, and policy version.
-
-Cleared cases and overturned enforcement decisions feed back into threshold, rule, and taxonomy review.
+Synthetic case management includes review outcomes, enforcement actions, appeals, overturns, decision latency, taxonomy version, and policy version. Cleared and overturned cases feed back into threshold, rule, and taxonomy review.
 
 ## Mitigation measurement
 
-The project builds an account-day panel and reports a DiD-style diagnostic with bootstrap uncertainty and pre-trend checks.
-
-It explicitly does **not** claim causal proof from a simple before/after chart.
+The project builds an account-day panel and reports a DiD-style diagnostic with bootstrap uncertainty and pre-trend checks. It does not claim causal proof from a simple before/after chart.
 
 ## Data quality is part of detection
 
-Contracts cover:
-
-- schema;
-- request-ID uniqueness;
-- account referential integrity;
-- signal coverage;
-- entitlement schema and account-cycle uniqueness;
-- instrumentation regressions.
+Contracts cover schema, request-ID uniqueness, account referential integrity, signal coverage, entitlement schema, account-cycle uniqueness, and instrumentation regressions.
 
 A telemetry failure should trigger data repair and annotation before detection retuning.
 
@@ -311,7 +291,8 @@ The pipeline produces:
 - privacy/legal governance brief;
 - stakeholder action register;
 - investigation case bundles;
-- reusable SQL workflows and semantic views.
+- reusable SQL workflows and semantic views;
+- adversarial resilience artifacts and rollback-oriented regression gates.
 
 # Quick start
 
@@ -338,6 +319,7 @@ src/copilot_trust/
   synthetic_controls.py   legitimate shared-entity confounders
   synthetic_novelty.py    hidden emerging-pattern benchmark injection
   emerging_discovery.py   novelty/cohort/taxonomy/graph discovery
+  adversarial_stress.py   adaptive-behavior resilience stress tests
   entitlements.py         entitlement ledger + billing-family analysis
   features.py             SQL-style feature mart
   scoring.py              supervised + anomaly + graph prioritization
@@ -355,7 +337,6 @@ src/copilot_trust/
   reporting.py            Decision Center + executive brief
 
 sql/                      reusable analyst queries
-config/                   taxonomy + metric contracts
 docs/                     architecture, governance, runbooks, JD mapping
 tests/                    integration and enforcement-boundary tests
 .github/workflows/         reproducible CI benchmark
@@ -363,6 +344,6 @@ tests/                    integration and enforcement-boundary tests
 
 # Production boundary
 
-CSV + SQLite/Pandas are used for a local reproducible portfolio benchmark. A production design would use partitioned event-time marts, incremental materialization, late-arrival handling, idempotent backfills, versioned data/taxonomy contracts, restricted sensitive-data access, and auditable policy/review systems.
+CSV + SQLite/Pandas are used for a local reproducible portfolio benchmark. A production design would use partitioned event-time marts, incremental materialization, late-arrival handling, idempotent backfills, versioned data/taxonomy contracts, restricted sensitive-data access, auditable policy/review systems, and controlled access to operational thresholds.
 
-This repository intentionally does not claim GitHub-scale data, internal Copilot telemetry, internal abuse taxonomy access, or production enforcement experience.
+This repository intentionally does not claim GitHub-scale data, internal Copilot telemetry, internal abuse taxonomy access, production thresholds, or production enforcement experience.

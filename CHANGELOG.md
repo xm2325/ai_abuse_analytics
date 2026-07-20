@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.0 — adversarial adaptation and detection-resilience stress testing
+
+- Added frozen-rule adversarial stress tests across velocity smoothing, identity fragmentation, token rotation, quota spreading, policy-signal suppression, and blended multi-signal adaptation.
+- Added four synthetic adaptation strengths per scenario to measure recall degradation rather than assume static behavior.
+- Added per-rule brittleness outputs and a defense-in-depth diagnostic that compares diversified rule families against single-rule degradation.
+- Added release-style evasion regression gates, including a severe-adaptation recall floor and a rule-dependency review gate.
+- Added stakeholder action routing for material resilience degradation, with canary/replay/rollback recommendations.
+- Added defensive SQL for near-boundary bunching, rule-overlap decay, canary rollback monitoring, and signal-diversity audits.
+- Added documentation, tests, CI artifact contracts, and version 0.8.0.
+
+The stress suite uses coarse synthetic feature transforms only. It does not reproduce real product controls, publish operational thresholds, provide bypass steps, or authorize automatic enforcement.
+
 ## v0.7.0 — unknown / emerging abuse discovery
 
 - Added a benchmark-only hidden late-emerging pattern that is absent from the known abuse taxonomy.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+import json
 import pandas as pd
 
 
@@ -18,20 +19,32 @@ def build_action_register(metrics:dict,slices:pd.DataFrame,dq:pd.DataFrame,alert
         {"priority":"P1","decision":"decide whether a candidate rule can leave shadow mode","evidence":f"{best_rule.rule_name}: precision={best_rule.precision:.1%}, FPR={best_rule.false_positive_rate:.1%}, workload={best_rule.review_workload_share:.1%}","recommended_action":best_rule.recommendation,"owner":"Trust & Safety + Anti-Abuse Engineering","partners":"Data Science + Product","review_gate":"human-investigation queue only; no automatic enforcement"},
         {"priority":"P1","decision":"assess mitigation before wider rollout","evidence":f"DiD-style change={mit.did_account_day_requests:.3f} requests/account-day; 95% bootstrap CI [{mit.bootstrap_95_ci_low:.3f}, {mit.bootstrap_95_ci_high:.3f}]","recommended_action":"check pre-trends, user-impact guardrails, and rollout assignment before causal claim","owner":"Product + Trust & Safety Analytics","partners":"Engineering + Data Science","review_gate":"rollout review"}
     ]
-    taxonomy_path=out_dir/"candidate_taxonomy_proposals.csv"
-    cohorts_path=out_dir/"emerging_behavior_cohorts.csv"
+    taxonomy_path=out_dir/"candidate_taxonomy_proposals.csv";cohorts_path=out_dir/"emerging_behavior_cohorts.csv"
     if taxonomy_path.exists() and cohorts_path.exists():
         taxonomy=pd.read_csv(taxonomy_path);cohorts=pd.read_csv(cohorts_path)
         if len(taxonomy) and len(cohorts):
             top=cohorts.sort_values("mean_novelty_score",ascending=False).iloc[0]
             proposal=taxonomy[taxonomy.cohort_id.eq(top.cohort_id)].iloc[0] if taxonomy.cohort_id.eq(top.cohort_id).any() else taxonomy.iloc[0]
             rows.insert(3,{"priority":"P1","decision":"review newly discovered behavior cohort for taxonomy inclusion","evidence":f"{top.cohort_id}: {proposal.candidate_name}, n={int(top.candidate_accounts)}, mean novelty={top.mean_novelty_score:.2f}, known-detector flag rate={top.known_detection_flag_rate:.1%}","recommended_action":"review product/integration changes, telemetry health, entity context, and sampled cases; if still unexplained, freeze a candidate definition for independent shadow replay","owner":"Trust & Safety Analytics","partners":"Product + Security + Anti-Abuse Engineering","review_gate":"taxonomy proposal only; independent replay and matured human labels required before rule promotion"})
+    stress_path=out_dir/"adversarial_stress_summary.json"
+    if stress_path.exists():
+        summary=json.loads(stress_path.read_text());worst_rule=summary.get("worst_single_rule",{});worst_def=summary.get("worst_defense_in_depth",{})
+        if worst_rule:
+            drop=float(worst_rule.get("recall_drop",0) or 0);target_n=int(worst_rule.get("target_accounts_holdout",0) or 0)
+            evidence_limited=target_n<3
+            priority="P0" if (drop>=0.50 and not evidence_limited) else "P1"
+            evidence=(f"worst target-scenario recall drop={drop:.1%} for {worst_rule.get('rule_name')} under {worst_rule.get('strategy')}; "
+                      f"target holdout n={target_n}; worst defense-in-depth drop={float(worst_def.get('recall_drop',0)):.1%}")
+            action=("treat the observed drop as a fragility hypothesis because target evidence is small; expand time-based replay/holdout evidence, then add independent signals and define canary/rollback gates"
+                    if evidence_limited else
+                    "keep exact production boundaries private, add independent signal families, run canary/replay after rule changes, and define rollback on material resilience degradation")
+            rows.insert(4,{"priority":priority,"decision":"review detection brittleness under adaptive behavior","evidence":evidence,"recommended_action":action,"owner":"Trust & Safety Analytics + Anti-Abuse Engineering","partners":"Security + Data Science + Product","review_gate":"stress-test evidence volume + rollback review before widening detection policy"})
     out=pd.DataFrame(rows);out.to_csv(out_dir/"stakeholder_action_register.csv",index=False);return out
 
 
 def build_stakeholder_briefs(action_register:pd.DataFrame,review_feedback:pd.DataFrame,signal_backlog:pd.DataFrame,out_dir:str|Path)->None:
     out_dir=Path(out_dir);out_dir.mkdir(parents=True,exist_ok=True);p0p1=action_register[action_register.priority.isin(["P0","P1"])];actions_text="\n".join(f"- **{r.decision}** — {r.evidence}. Next: {r.recommended_action}." for _,r in p0p1.iterrows());overall=review_feedback[(review_feedback.scope=="overall")&(review_feedback.value=="all")]
     feedback_line=(f"Matured review confirmation rate is {overall.iloc[0].final_confirmation_rate:.1%}; appeal rate among enforced cases is {overall.iloc[0].appeal_rate_among_enforced:.1%}; overturn rate among appeals is {overall.iloc[0].overturn_rate_among_appeals:.1%}.") if len(overall) else "No matured review feedback is available yet."
-    (out_dir/"brief_trust_safety.md").write_text("# Trust & Safety decision brief\n\n## Decisions requiring attention\n"+actions_text+"\n\n## Review feedback\n"+feedback_line+"\n\n## Enforcement boundary\nScores, novelty cohorts, billing-family signals, and candidate rules prioritize investigation. A novel cohort is not an abuse finding. Cleared and overturned outcomes must flow back into threshold, taxonomy, and rule review.\n")
-    backlog_text="\n".join(f"- **{r.priority}: {r.signal_or_integration}** — {r.analytical_problem}. Partner: {r.partner}." for _,r in signal_backlog.iterrows());(out_dir/"brief_engineering.md").write_text("# Engineering / Data signal brief\n\n## Highest-value integration asks\n"+backlog_text+"\n\n## Operating rule\nA data-quality regression is treated as a detection-system incident. Detection retuning or new-taxonomy creation should not be used to mask broken telemetry.\n")
+    (out_dir/"brief_trust_safety.md").write_text("# Trust & Safety decision brief\n\n## Decisions requiring attention\n"+actions_text+"\n\n## Review feedback\n"+feedback_line+"\n\n## Enforcement boundary\nScores, novelty cohorts, billing-family signals, and candidate rules prioritize investigation. Adversarial stress tests measure brittleness but do not authorize automatic enforcement or reveal real production controls. Small target-scenario samples must be treated as fragility hypotheses rather than stable resilience estimates. Cleared and overturned outcomes must flow back into threshold, taxonomy, and rule review.\n")
+    backlog_text="\n".join(f"- **{r.priority}: {r.signal_or_integration}** — {r.analytical_problem}. Partner: {r.partner}." for _,r in signal_backlog.iterrows());(out_dir/"brief_engineering.md").write_text("# Engineering / Data signal brief\n\n## Highest-value integration asks\n"+backlog_text+"\n\n## Operating rule\nA data-quality regression is treated as a detection-system incident. Detection retuning or new-taxonomy creation should not be used to mask broken telemetry. Evasion stress results should drive independent-signal and rollback design, not publication of exact production boundaries.\n")
     (out_dir/"brief_cela_governance.md").write_text("# CELA / privacy review brief\n\n## Default analytical boundary\nThe default workbench uses synthetic metadata and hashed identifiers and does not expose raw prompts, completions, IP addresses, payment details, or device identifiers.\n\n## Review triggers\n- Any request for raw content review.\n- Any new cross-context identity linkage that changes the purpose or sensitivity of data use.\n- Any proposal to move from investigation prioritization to automatic enforcement.\n- Any new retention, sharing, or access pattern for investigation data.\n\n## Audit expectation\nTaxonomy version, policy version, review outcome, enforcement action, appeal result, and final outcome are retained in the synthetic case-feedback contract so analytical decisions can be reconstructed.\n")
