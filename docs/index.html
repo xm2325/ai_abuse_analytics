@@ -1,5 +1,88 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Abuse Analytics</title><style>body{font-family:system-ui;background:#0d1117;color:#e6edf3;margin:0}.w{max-width:1100px;margin:auto;padding:40px}.sub{color:#8b949e}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}.c,.p{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:18px}.c b{font-size:28px;display:block;margin-top:6px}h2{margin-top:40px}.flow{white-space:pre-wrap;font-family:ui-monospace,monospace;line-height:1.55;color:#79c0ff}.warn{border-left:4px solid #f85149}.ok{border-left:4px solid #58a6ff}code{color:#79c0ff}</style></head><body><main class="w"><h1>AI Abuse Analytics Decision Center</h1><p class="sub">Static benchmark landing page. Running <code>python run_all.py --n-accounts 180 --seed 17</code> rebuilds the full interactive Plotly Decision Center.</p><div class="cards"><div class="c">Holdout ROC AUC<b>0.914</b></div><div class="c">Average precision<b>0.653</b></div><div class="c">False-positive rate<b>4.1%</b></div><div class="c">Holdout accounts<b>54</b></div></div><h2>Decision flow</h2><div class="p flow">telemetry → data contracts → trend monitoring → risk / anomaly / entity signals
-→ review capacity → shadow rules → investigation → human review / appeal
-→ mitigation measurement → rule / threshold / taxonomy revision</div><h2>Current benchmark decisions</h2><div class="p warn"><b>Protect detection from telemetry regression.</b><br>IP signal coverage fell from a 98.457% baseline to 76.923% on the injected incident window. Repair and annotate the data issue before detection retuning.</div><br><div class="p ok"><b>Keep identity-dispersion rule in shadow mode.</b><br>Holdout precision is 100%, but only two accounts triggered. Perfect precision on n=2 is not enough evidence for promotion.</div><br><div class="p ok"><b>Do not overstate mitigation evidence.</b><br>DiD-style estimate: -5.109 requests/account-day; bootstrap 95% interval [-8.804, 1.102]. The interval crosses zero and assignment is not randomized.</div><h2>Safety boundary</h2><div class="p">Scores and rules prioritize human investigation; they do not authorize automatic enforcement. The default analyst layer excludes raw prompts, completions, IP addresses, payment details, and device identifiers.</div><h2>Rebuild the complete dashboard</h2><div class="p flow">pip install -r requirements.txt
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Abuse Analytics — v1.0 Operating Brief</title>
+<style>
+body{font-family:Inter,system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:0}.w{max-width:1180px;margin:auto;padding:40px}.sub,.muted{color:#8b949e}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}.c,.p{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:18px}.c span{display:block;color:#8b949e;font-size:13px}.c b{font-size:22px;display:block;margin-top:7px}h1{letter-spacing:-.03em}h2{margin-top:42px;border-top:1px solid #30363d;padding-top:26px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}.flow{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.6;color:#79c0ff}.warn{border-left:4px solid #f85149}.ok{border-left:4px solid #58a6ff}.review{border-left:4px solid #d29922}code{color:#79c0ff}a{color:#58a6ff}.tag{display:inline-block;border:1px solid #30363d;border-radius:999px;padding:4px 9px;margin-right:6px;color:#8b949e;font-size:12px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px;border-bottom:1px solid #30363d;text-align:left}th{color:#8b949e}
+</style>
+</head>
+<body><main class="w">
+<h1>AI Abuse Analytics — v1.0 Trust & Safety Decision Center</h1>
+<p class="sub">Static v1.0 operating snapshot from the reproducible synthetic benchmark. Running <code>python run_all.py --n-accounts 180 --seed 17</code> rebuilds the full interactive Plotly Decision Center.</p>
+<p><a href="START_HERE.md">Start here</a> · <a href="JD_TRACEABILITY.md">JD traceability</a> · <a href="V1_OPERATING_MODEL.md">Operating model</a></p>
+
+<h2>v1.0 Operating brief — start here</h2>
+<div class="p ok"><b>Executive answer.</b><br>The v1.0 operating artifacts are coherent and portfolio/demo-ready, while the current synthetic run correctly places policy widening and detection retuning on hold because a deliberately injected IP-coverage incident is active and evidence/review maturity gates remain open. This is a healthy operating hold, not a failed build.</div>
+<div class="cards" style="margin-top:16px">
+  <div class="c"><span>Release</span><b>1.0.0</b></div>
+  <div class="c"><span>Artifact integrity</span><b>Ready</b></div>
+  <div class="c"><span>Operating state</span><b>Active hold</b></div>
+  <div class="c"><span>Registered controls</span><b>9</b></div>
+  <div class="c"><span>SLO breach / review</span><b>1 / 2</b></div>
+  <div class="c"><span>Evidence packages</span><b>3</b></div>
+</div>
+
+<h2>What needs a decision now?</h2>
+<div class="grid">
+  <div class="p warn"><span class="tag">P0</span><b>Protect detection from telemetry regression.</b><br><br>The injected IP-coverage incident breaches the source-contract SLO. Repair/annotate the source and replay the affected window before detection retuning or new-taxonomy conclusions.</div>
+  <div class="p warn"><span class="tag">P0</span><b>Review legitimate-user threshold impact.</b><br><br>False-positive/user-impact evidence requires review before widening any threshold or enforcement policy.</div>
+  <div class="p review"><span class="tag">P1</span><b>Hold the canary and review possible displacement.</b><br><br>The synthetic experiment shows a possible displacement pattern, but interval evidence is still low precision. Do not auto-expand; collect more matured evidence.</div>
+</div>
+
+<h2>Operating SLO scorecard</h2>
+<div class="p">
+<table>
+<thead><tr><th>SLO</th><th>Observed</th><th>Status</th><th>Required action</th></tr></thead>
+<tbody>
+<tr><td>Source contract health</td><td>1 warning/failure</td><td><b>BREACH</b></td><td>Repair/annotate source before retuning detection or taxonomy.</td></tr>
+<tr><td>1-FTE case operations</td><td>Backlog 0; SLA breach ≈2.6%</td><td>PASS</td><td>Continue monitoring queue/capacity.</td></tr>
+<tr><td>Rule evidence maturity</td><td>0 evidence-ready rules</td><td>REVIEW</td><td>Keep rules in shadow; collect replay/matured-label evidence.</td></tr>
+<tr><td>Canary matured-review evidence</td><td>4 matured reviews</td><td>REVIEW</td><td>Hold/limit canary; collect review and appeal outcomes.</td></tr>
+<tr><td>Automatic-action boundary</td><td>Disabled</td><td>PASS</td><td>No automatic enforcement or policy expansion.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Control + evidence flow</h2>
+<div class="p flow">data contracts / source-of-truth boundaries
+        ↓
+known-abuse detection + unknown-pattern discovery
+        ↓
+investigation queue + entity / entitlement evidence
+        ↓
+uncertainty + evidence volume + historical replay
+        ↓
+adversarial resilience
+        ↓
+shadow → control / canary experiment
+        ↓
+ITT + placebo + negative control + spillover / displacement
+        ↓
+decision lineage + SLO + incident replay + audit
+        ↓
+case-to-policy evidence package
+        ↓
+human analyst / policy-owner decision</div>
+
+<h2>Case → policy evidence packages</h2>
+<div class="p ok"><b>Three privacy-safe packages are generated in the final CI benchmark.</b><br><br>Each package connects a pseudonymous investigation candidate to its reason codes, the relevant registered rule family, active data-quality caveats, replay/evidence-power/resilience context, current experiment state, competing benign explanations, and escalation/privacy gates. A package is a decision aid — never an abuse verdict.</div>
+
+<h2>Why the project does not stop at a classifier</h2>
+<div class="grid">
+  <div class="p"><b>Known abuse</b><br><br>Frozen rules, risk/anomaly signals, legitimate-user controls, FPR/FNR and evidence-volume gates.</div>
+  <div class="p"><b>Unknown abuse</b><br><br>Recent-vs-baseline novelty, behavior cohorts, telemetry-health screening and candidate taxonomy proposals.</div>
+  <div class="p"><b>Adaptive behavior</b><br><br>Rule brittleness and defense-in-depth stress without exposing real production bypass thresholds.</div>
+  <div class="p"><b>Policy impact</b><br><br>Pre-period-only cluster randomization, ITT, placebo/negative control, displacement, sequential guardrails and human stopping decisions.</div>
+</div>
+
+<h2>Safety and governance boundary</h2>
+<div class="p warn"><b>No automatic enforcement. No automatic policy expansion.</b><br><br>The default analyst layer excludes raw prompts, completions, raw IP addresses, raw device identifiers, card numbers and payment details. Scores, rules, cohorts, experiments, registries and evidence packages support human investigation and policy review only.</div>
+
+<h2>Rebuild the complete interactive dashboard</h2>
+<div class="p flow">pip install -r requirements.txt
 python run_all.py --n-accounts 180 --seed 17
-open docs/index.html</div></main></body></html>
+open docs/index.html</div>
+<p class="muted">The generated dashboard replaces this compact static snapshot with the full interactive Decision Center while preserving the same v1.0 operating/control-plane logic.</p>
+</main></body></html>
