@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.0 — billing and entitlement abuse analytics
+
+- Added a separate synthetic entitlement ledger rather than treating telemetry as the billing source of truth.
+- Added cycle-level usage and effective-allowance analysis.
+- Added billing-family aggregation for multi-account entitlement-pressure investigation.
+- Added legitimate managed/shared-billing context as an explicit competing explanation before escalation.
+- Added privacy-safe entitlement investigation queues using pseudonymous billing-family references rather than raw payment details.
+- Added entitlement schema, referential-integrity, and account-cycle uniqueness contracts.
+- Added Decision Center reporting, SQL investigation workflow, documentation, tests, and CI artifact contracts.
+
+Billing-family and near-limit signals remain investigation leads only. Shared billing or high utilization never authorizes automatic enforcement.
+
 ## v0.5.0 — historical replay, evidence power, and queue stress testing
 
 - Added time-based historical replay with explicit no-lookahead windows and replay phases around mitigation and emerging-abuse changes.
