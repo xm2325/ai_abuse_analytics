@@ -12,7 +12,7 @@ def test_small_pipeline(tmp_path):
     assert 0<=m["roc_auc"]<=1
     assert 0<=m["false_positive_rate"]<=1
     assert 0<=m["brier_score"]<=1
-    required=["docs/index.html","artifacts/investigation_queue.csv","artifacts/emerging_trend_alerts.csv","artifacts/data_quality_findings.csv","artifacts/rule_shadow_evaluation.csv","artifacts/review_feedback_metrics.csv","artifacts/mitigation_evaluation.csv","artifacts/stakeholder_action_register.csv","artifacts/feature_drift_diagnostics.csv","artifacts/risk_calibration_bins.csv","artifacts/queue_sla_snapshot.csv","artifacts/queue_capacity_plan.csv","artifacts/detection_rule_registry.csv","artifacts/policy_threshold_frontier.csv","artifacts/policy_threshold_recommendation.json","artifacts/historical_rule_replay.csv","artifacts/historical_case_arrivals.csv","artifacts/historical_rule_replay_summary.csv","artifacts/rule_evidence_power.csv","artifacts/queue_simulation_daily.csv","artifacts/queue_simulation_summary.csv","artifacts/brief_trust_safety.md","artifacts/brief_engineering.md","artifacts/brief_cela_governance.md"]
+    required=["docs/index.html","artifacts/investigation_queue.csv","artifacts/emerging_trend_alerts.csv","artifacts/data_quality_findings.csv","artifacts/rule_shadow_evaluation.csv","artifacts/review_feedback_metrics.csv","artifacts/mitigation_evaluation.csv","artifacts/stakeholder_action_register.csv","artifacts/feature_drift_diagnostics.csv","artifacts/risk_calibration_bins.csv","artifacts/queue_sla_snapshot.csv","artifacts/queue_capacity_plan.csv","artifacts/detection_rule_registry.csv","artifacts/policy_threshold_frontier.csv","artifacts/policy_threshold_recommendation.json","artifacts/historical_rule_replay.csv","artifacts/historical_case_arrivals.csv","artifacts/historical_rule_replay_summary.csv","artifacts/rule_evidence_power.csv","artifacts/queue_simulation_daily.csv","artifacts/queue_simulation_summary.csv","artifacts/entitlement_cycle_usage.csv","artifacts/billing_family_risk.csv","artifacts/entitlement_investigation_queue.csv","artifacts/entitlement_data_quality.csv","artifacts/brief_trust_safety.md","artifacts/brief_engineering.md","artifacts/brief_cela_governance.md"]
     for rel in required: assert (tmp_path/rel).exists(),rel
 
 
@@ -58,3 +58,19 @@ def test_v05_historical_replay_and_evidence_power(tmp_path):
     sim=pd.read_csv(tmp_path/"artifacts/queue_simulation_summary.csv")
     assert {"analyst_fte","cases_arrived","final_backlog","max_backlog","p95_time_to_review_hours"}.issubset(sim.columns)
     assert (sim.final_backlog>=0).all()
+
+
+def test_v06_entitlement_abuse_and_shared_billing_context(tmp_path):
+    run(tmp_path,n_accounts=120,seed=31)
+    assert (tmp_path/"data/entitlements.csv").exists()
+    usage=pd.read_csv(tmp_path/"artifacts/entitlement_cycle_usage.csv")
+    families=pd.read_csv(tmp_path/"artifacts/billing_family_risk.csv")
+    queue=pd.read_csv(tmp_path/"artifacts/entitlement_investigation_queue.csv")
+    dq=pd.read_csv(tmp_path/"artifacts/entitlement_data_quality.csv")
+    assert {"cycle_index","usage_ratio","near_limit","billing_family_ref"}.issubset(usage.columns)
+    assert {"family_accounts","near_limit_accounts","shared_billing_context","candidate_multi_account_evasion","reason_codes"}.issubset(families.columns)
+    assert {"entitlement_schema","entitlement_account_referential_integrity","entitlement_cycle_uniqueness"}.issubset(set(dq.contract))
+    assert dq.status.eq("pass").all()
+    forbidden={"payment_details","card_number","raw_payment_method"}
+    assert forbidden.isdisjoint(set(queue.columns))
+    assert ((families.shared_billing_context==1) & families.reason_codes.str.contains("shared_billing_requires_enterprise_context_review")).any()
