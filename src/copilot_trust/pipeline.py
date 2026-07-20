@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from .adversarial_stress import build_evasion_regression_gates, evaluate_adversarial_adaptation
 from .data_quality import build_signal_backlog, run_data_contracts
 from .drift import evaluate_drift
 from .emerging_discovery import discover_emerging_abuse
@@ -40,6 +41,8 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     discovery=discover_emerging_abuse(data,art,scores,seed=seed)
     entitlement_usage,billing_families,entitlement_queue,entitlement_dq=evaluate_entitlement_abuse(data,art)
     rules=evaluate_shadow_rules(scores,art); rule_evidence=evaluate_rule_evidence_power(rules,art); rule_registry=build_rule_registry(rules,art,rule_evidence)
+    adversarial_stress,defense_stress,adversarial_summary=evaluate_adversarial_adaptation(scores,art)
+    evasion_gates=build_evasion_regression_gates(adversarial_stress,defense_stress,art)
     drift,calibration=evaluate_drift(scores,art)
     queue_sla,queue_capacity=evaluate_queue_operations(scores,data,art); simulate_threshold_policy(scores,art)
     replay,replay_arrivals,replay_summary=build_historical_replay(data,art); queue_sim_daily,queue_sim_summary=simulate_queue_capacity(replay_arrivals,art)
