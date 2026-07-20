@@ -72,6 +72,10 @@ def test_v06_entitlement_abuse_and_shared_billing_context(tmp_path):
     counts=accounts[accounts.ground_truth_abuse_type.ne("legitimate")].ground_truth_abuse_type.value_counts()
     assert expected.issubset(set(counts.index))
     assert (counts.loc[list(expected)]>=2).all()
+    assert "approved_organization_context" in accounts.columns
+    approved=accounts[accounts.approved_organization_context.eq(1)]
+    assert len(approved)>=6
+    assert approved.ground_truth_abuse_type.eq("legitimate").all()
     assert {"cycle_index","usage_ratio","near_limit","billing_family_ref","entitlement_contract_version"}.issubset(usage.columns)
     assert {"family_accounts","near_limit_accounts","shared_billing_context","candidate_multi_account_evasion","reason_codes"}.issubset(families.columns)
     assert {"entitlement_schema","entitlement_account_referential_integrity","entitlement_cycle_uniqueness"}.issubset(set(dq.contract))
