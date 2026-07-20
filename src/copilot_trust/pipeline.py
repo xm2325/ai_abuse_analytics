@@ -43,6 +43,17 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     entitlement_usage,billing_families,entitlement_queue,entitlement_dq=evaluate_entitlement_abuse(data,art)
     rules=evaluate_shadow_rules(scores,art); rule_evidence=evaluate_rule_evidence_power(rules,art); rule_registry=build_rule_registry(rules,art,rule_evidence)
     adversarial_stress,defense_stress,adversarial_summary=evaluate_adversarial_adaptation(scores,art)
+    # Make target-scenario recall the primary single-rule resilience view when the synthetic
+    # holdout contains that rule's target scenario; retain overall recall as explicit context.
+    adversarial_stress["baseline_overall_recall"]=adversarial_stress["baseline_recall"]
+    adversarial_stress["adapted_overall_recall"]=adversarial_stress["adapted_recall"]
+    adversarial_stress["overall_recall_drop"]=adversarial_stress["recall_drop"]
+    has_target=adversarial_stress.target_accounts_holdout.gt(0)
+    adversarial_stress.loc[has_target,"baseline_recall"]=adversarial_stress.loc[has_target,"baseline_target_recall"]
+    adversarial_stress.loc[has_target,"adapted_recall"]=adversarial_stress.loc[has_target,"adapted_target_recall"]
+    adversarial_stress.loc[has_target,"recall_drop"]=adversarial_stress.loc[has_target,"target_recall_drop"]
+    adversarial_stress["recall_metric_scope"]=has_target.map({True:"target_scenario",False:"overall_fallback_no_target_holdout"})
+    adversarial_stress.to_csv(art/"adversarial_rule_stress.csv",index=False)
     # Keep backward-compatible summary keys for downstream briefs while making target-scenario
     # recall the primary single-rule brittleness metric.
     worst_rule=adversarial_summary.get("worst_single_rule",{})
