@@ -1,0 +1,5 @@
+analyst_hours,cases_reviewable,share_of_flagged_queue,known_abuse_recall_within_flagged_queue,expected_precision_from_benchmark_labels,p0_p1_coverage
+4,9,0.75,0.7777777777777778,0.7777777777777778,0.8571428571428571
+8,12,1.0,1.0,0.75,1.0
+16,12,1.0,1.0,0.75,1.0
+32,12,1.0,1.0,0.75,1.0

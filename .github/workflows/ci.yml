@@ -1,0 +1,61 @@
+name: trust-analytics-ci
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-and-benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Unit and integration tests
+        run: pytest -q
+      - name: Rebuild reproducible decision benchmark
+        run: python run_all.py --n-accounts 120 --seed 17
+      - name: Verify decision artifacts
+        run: |
+          test -s artifacts/model_metrics.json
+          test -s artifacts/emerging_trend_alerts.csv
+          test -s artifacts/data_quality_findings.csv
+          test -s artifacts/rule_shadow_evaluation.csv
+          test -s artifacts/review_feedback_metrics.csv
+          test -s artifacts/mitigation_evaluation.csv
+          test -s artifacts/stakeholder_action_register.csv
+          test -s artifacts/feature_drift_diagnostics.csv
+          test -s artifacts/risk_calibration_bins.csv
+          test -s artifacts/queue_sla_snapshot.csv
+          test -s artifacts/queue_capacity_plan.csv
+          test -s artifacts/detection_rule_registry.csv
+          test -s docs/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trust-safety-decision-benchmark
+          path: |
+            artifacts/model_metrics.json
+            artifacts/executive_brief.md
+            artifacts/stakeholder_action_register.csv
+            artifacts/brief_trust_safety.md
+            artifacts/brief_engineering.md
+            artifacts/brief_cela_governance.md
+            artifacts/slice_metrics.csv
+            artifacts/review_capacity_scenarios.csv
+            artifacts/emerging_trend_alerts.csv
+            artifacts/data_quality_findings.csv
+            artifacts/signal_integration_backlog.csv
+            artifacts/rule_shadow_evaluation.csv
+            artifacts/review_feedback_metrics.csv
+            artifacts/enforcement_safety_metrics.csv
+            artifacts/mitigation_evaluation.csv
+            artifacts/investigation_queue.csv
+            artifacts/feature_drift_diagnostics.csv
+            artifacts/risk_calibration_bins.csv
+            artifacts/queue_sla_snapshot.csv
+            artifacts/queue_capacity_plan.csv
+            artifacts/detection_rule_registry.csv
+            docs/index.html

@@ -1,0 +1,27 @@
+version: "1.0"
+metrics:
+  review_capacity_precision:
+    unit: account
+    owner: trust_safety_analytics
+    decision: analyst_queue_size
+    minimum_dimensions: [plan, managed_infrastructure]
+  false_positive_rate:
+    unit: account
+    owner: trust_safety_analytics
+    reportability_rule: "n>=10 and negatives>=5 for slice publication"
+    decision: threshold_or_rule_review
+  signal_coverage:
+    unit: event
+    owner: data_engineering
+    alert: "daily drop >5 percentage points from baseline"
+    decision: data_incident
+  appeal_overturn_rate:
+    unit: enforced_investigation
+    owner: trust_safety_operations
+    label_maturity_days: 7
+    decision: enforcement_safety_review
+  mitigation_account_day_effect:
+    unit: requests_per_account_day
+    owner: product_and_trust_safety_analytics
+    required_checks: [comparison_group, bootstrap_interval, pretrend]
+    decision: rollout_review

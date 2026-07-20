@@ -1,0 +1,9 @@
+contract,status,severity,observed,recommended_action
+telemetry_schema,pass,info,all required columns present,none
+request_id_uniqueness,pass,info,duplicate_rate=0.000000,none
+account_referential_integrity,pass,info,orphan_event_rate=0.000000,none
+model_family_domain,pass,info,invalid_rate=0.000000,none
+ip_hash_daily_coverage,fail,critical,baseline=98.457%; worst=76.923%; drop=21.534%,trace producer/integration change; annotate affected dates; suppress model-policy changes until coverage recovers
+device_hash_daily_coverage,pass,info,baseline=99.329%; worst=98.616%; drop=0.713%,monitor
+token_hash_daily_coverage,pass,info,baseline=100.000%; worst=100.000%; drop=0.000%,monitor
+payment_hash_daily_coverage,pass,info,baseline=100.000%; worst=100.000%; drop=0.000%,monitor

@@ -1,0 +1,3 @@
+# Analyst playbook
+
+Start with the decision, not the chart. Validate data before interpreting behavior. Separate observation from interpretation. Write at least one competing benign explanation for a high-risk case. Use independent signal families where possible. Quantify review workload and false-positive cost. Mark small-sample findings clearly. Do not convert correlation or a before/after difference into a causal claim without design support. Tailor the output to the team that must act: investigators need evidence, engineering needs data contracts, product needs trade-offs, and privacy/legal reviewers need purpose and access boundaries.

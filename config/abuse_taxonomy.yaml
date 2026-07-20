@@ -1,0 +1,51 @@
+version: "2.0"
+status: benchmark_standard
+principles:
+  - a signal is not a verdict
+  - IP sharing alone is not identity proof
+  - use independent signal families before escalation where possible
+  - raw-content review requires a separate approved access path
+  - model scores and candidate rules do not auto-enforce
+families:
+  scripted_automation:
+    description: sustained machine-like request patterns inconsistent with ordinary interactive use
+    primary_signals: [request_velocity, interarrival_regularity, overnight_share, acceptance_rate]
+    common_confounders: [power_user, approved_automation, ci_runner, agent_workflow]
+    minimum_evidence: behavioral_pattern_plus_context
+    default_disposition: human_investigation
+    owner: trust_safety_analytics
+  credential_sharing:
+    description: one entitlement appears to be used by multiple independent actors
+    primary_signals: [device_dispersion, ip_dispersion, concurrency]
+    common_confounders: [enterprise_nat, vpn, managed_device_fleet, travel, shared_dev_environment]
+    minimum_evidence: dispersion_plus_temporal_or_identity_corroboration
+    default_disposition: human_investigation
+    owner: trust_safety_analytics
+  token_misuse:
+    description: authentication token fingerprint is linked to multiple accounts or unexpected contexts
+    primary_signals: [token_degree, device_degree, token_lifecycle]
+    common_confounders: [legitimate_integration, token_rotation, migration]
+    minimum_evidence: shared_token_plus_lifecycle_context
+    default_disposition: human_investigation
+    owner: security_and_trust_safety
+  quota_evasion:
+    description: linked identities or accounts appear to avoid entitlement or usage controls
+    primary_signals: [payment_degree, device_degree, quota_pressure, account_linkage]
+    common_confounders: [household_payment, corporate_payment, managed_devices]
+    minimum_evidence: entitlement_pressure_plus_reliable_linkage
+    default_disposition: human_investigation
+    owner: trust_safety_product
+  coordinated_abuse:
+    description: multiple accounts show corroborated shared infrastructure and synchronized behavior
+    primary_signals: [shared_device, shared_token, shared_payment, temporal_bursts]
+    common_confounders: [enterprise_network, classroom, managed_fleet, shared_runner]
+    minimum_evidence: multi_entity_or_temporal_corroboration
+    default_disposition: cluster_investigation
+    owner: anti_abuse_security
+  policy_abuse:
+    description: elevated safety-system signals that may require approved content-review paths
+    primary_signals: [prompt_injection_signal, content_policy_signal, safety_block_rate]
+    common_confounders: [security_research, red_teaming, benign_code_context]
+    minimum_evidence: aggregate_signal_review_then_approved_content_path_if_needed
+    default_disposition: restricted_review
+    owner: trust_safety_cela
