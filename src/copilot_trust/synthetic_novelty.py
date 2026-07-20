@@ -42,7 +42,6 @@ def inject_hidden_emerging_pattern(data_dir: str | Path, seed: int = 17) -> pd.D
         manifest.to_csv(data / "hidden_novelty_manifest.csv", index=False)
         return manifest
 
-    # Prefer accounts with established pre-campaign histories so change detection has a baseline.
     counts = telemetry.groupby("account_id").size().rename("events")
     eligible["events"] = eligible.account_id.map(counts).fillna(0)
     pool = eligible.sort_values("events", ascending=False).head(max(n_hidden * 4, n_hidden))
@@ -67,19 +66,17 @@ def inject_hidden_emerging_pattern(data_dir: str | Path, seed: int = 17) -> pd.D
 
         for day_offset in range(8):
             day = campaign_start + pd.Timedelta(days=day_offset)
-            # Modest volume increase: the novelty is sequence/surface/token behavior, not raw volume.
             n = int(rng.integers(7, 11))
             burst_anchors = [9 * 3600 + int(rng.integers(0, 1200)), 16 * 3600 + int(rng.integers(0, 1200))]
             for j in range(n):
                 anchor = burst_anchors[j % 2]
                 seconds = anchor + (j // 2) * int(rng.integers(55, 150))
                 ts = day + pd.Timedelta(seconds=seconds)
-                # Fast surface hopping and token rotation are new relative to the known taxonomy.
                 model_family = ["code_completion", "agent", "chat"][j % 3]
                 token_hash = _hash("novel-rotating-token", f"{account_id}:{day_offset}:{j % 4}")
                 new_rows.append({
                     "request_id": f"req_{next_id:09d}",
-                    "timestamp": ts.isoformat(),
+                    "timestamp": ts,
                     "account_id": account_id,
                     "device_hash": base_device,
                     "ip_hash": base_ip,
@@ -97,6 +94,7 @@ def inject_hidden_emerging_pattern(data_dir: str | Path, seed: int = 17) -> pd.D
                 next_id += 1
 
     augmented = pd.concat([telemetry, pd.DataFrame(new_rows)], ignore_index=True)
+    augmented["timestamp"] = pd.to_datetime(augmented.timestamp, utc=True, format="mixed")
     augmented = augmented.sort_values("timestamp").reset_index(drop=True)
     augmented.to_csv(data / "telemetry.csv", index=False)
 
