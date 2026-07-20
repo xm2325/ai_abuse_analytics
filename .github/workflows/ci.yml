@@ -55,8 +55,19 @@ jobs:
           test -s artifacts/defense_in_depth_stress.csv
           test -s artifacts/adversarial_stress_summary.json
           test -s artifacts/evasion_regression_gates.csv
+          test -s artifacts/policy_experiment_assignment.csv
+          test -s artifacts/policy_experiment_daily_outcomes.csv
+          test -s artifacts/policy_experiment_effect_summary.csv
+          test -s artifacts/policy_experiment_pretrend.csv
+          test -s artifacts/policy_experiment_heterogeneous_effects.csv
+          test -s artifacts/policy_experiment_sequential_monitor.csv
+          test -s artifacts/policy_experiment_interference_audit.csv
+          test -s artifacts/policy_experiment_review_guardrails.csv
+          test -s artifacts/policy_experiment_stopping_decision.json
+          test -s artifacts/policy_experiment_benchmark.json
           test -s data/entitlements.csv
           test -s data/hidden_novelty_manifest.csv
+          test -s data/hidden_policy_experiment_manifest.csv
           test -s docs/index.html
       - uses: actions/upload-artifact@v4
         with:
@@ -85,6 +96,16 @@ jobs:
             artifacts/defense_in_depth_stress.csv
             artifacts/adversarial_stress_summary.json
             artifacts/evasion_regression_gates.csv
+            artifacts/policy_experiment_assignment.csv
+            artifacts/policy_experiment_daily_outcomes.csv
+            artifacts/policy_experiment_effect_summary.csv
+            artifacts/policy_experiment_pretrend.csv
+            artifacts/policy_experiment_heterogeneous_effects.csv
+            artifacts/policy_experiment_sequential_monitor.csv
+            artifacts/policy_experiment_interference_audit.csv
+            artifacts/policy_experiment_review_guardrails.csv
+            artifacts/policy_experiment_stopping_decision.json
+            artifacts/policy_experiment_benchmark.json
             artifacts/rule_shadow_evaluation.csv
             artifacts/rule_evidence_power.csv
             artifacts/historical_rule_replay.csv
@@ -108,4 +129,5 @@ jobs:
             artifacts/policy_threshold_frontier.csv
             artifacts/policy_threshold_recommendation.json
             data/hidden_novelty_manifest.csv
+            data/hidden_policy_experiment_manifest.csv
             docs/index.html

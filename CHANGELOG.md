@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.9.0 — investigation experimentation and causal policy evaluation
+
+- Added a pre-rollout-only experiment assignment workflow so eligibility and randomization never use post-treatment behavior or hidden benchmark truth.
+- Added cluster-randomized `control` / `shadow` / `canary` arms using stronger organization/token/payment context to reduce obvious treatment contamination.
+- Added cluster-level ITT estimates, a clearly labeled Wald ATT-style diagnostic, pre-trend checks, a shadow placebo arm, and a prompt-length negative-control outcome.
+- Added explicit behavior-displacement analysis across primary surface, alternate surfaces, total activity, and synthetic cross-account migration.
+- Added interference audits that keep IP as context-only and never treat it as identity proof.
+- Added sequential canary monitoring with conservative descriptive boundaries, user-impact guardrails, displacement checks, and human-reviewed stop / pause / rollback recommendations.
+- Added matured review / appeal guardrails and exploratory heterogeneous-treatment-effect diagnostics with minimum cluster evidence-volume requirements.
+- Added a benchmark-only hidden responder/migration manifest that is never used by assignment, estimation, HTE, or stopping-rule calculations.
+- Added Decision Center views, stakeholder routing, SQL workflow, documentation, tests, CI artifact contracts, and version 0.9.0.
+
+Policy experiment outputs are decision support only. No sequential metric auto-expands a canary, and no experimental result authorizes automatic enforcement. A production design would require formal power/MDE planning, experiment registry, exposure consistency, approved sequential inference, network-interference assumptions, privacy review, and policy-owner sign-off.
+
 ## v0.8.0 — adversarial adaptation and detection-resilience stress testing
 
 - Added frozen-rule adversarial stress tests across velocity smoothing, identity fragmentation, token rotation, quota spreading, policy-signal suppression, and blended multi-signal adaptation.

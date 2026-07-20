@@ -12,7 +12,7 @@ def test_small_pipeline(tmp_path):
     assert 0<=m["roc_auc"]<=1
     assert 0<=m["false_positive_rate"]<=1
     assert 0<=m["brier_score"]<=1
-    required=["docs/index.html","artifacts/investigation_queue.csv","artifacts/emerging_trend_alerts.csv","artifacts/data_quality_findings.csv","artifacts/rule_shadow_evaluation.csv","artifacts/review_feedback_metrics.csv","artifacts/mitigation_evaluation.csv","artifacts/stakeholder_action_register.csv","artifacts/feature_drift_diagnostics.csv","artifacts/risk_calibration_bins.csv","artifacts/queue_sla_snapshot.csv","artifacts/queue_capacity_plan.csv","artifacts/detection_rule_registry.csv","artifacts/policy_threshold_frontier.csv","artifacts/policy_threshold_recommendation.json","artifacts/historical_rule_replay.csv","artifacts/historical_case_arrivals.csv","artifacts/historical_rule_replay_summary.csv","artifacts/rule_evidence_power.csv","artifacts/queue_simulation_daily.csv","artifacts/queue_simulation_summary.csv","artifacts/entitlement_cycle_usage.csv","artifacts/billing_family_risk.csv","artifacts/entitlement_investigation_queue.csv","artifacts/entitlement_data_quality.csv","artifacts/emerging_novelty_accounts.csv","artifacts/emerging_behavior_cohorts.csv","artifacts/emerging_graph_triage.csv","artifacts/candidate_taxonomy_proposals.csv","artifacts/novel_shadow_rule_candidates.csv","artifacts/novelty_incident_diagnostics.csv","artifacts/emerging_discovery_benchmark.json","artifacts/adversarial_rule_stress.csv","artifacts/defense_in_depth_stress.csv","artifacts/adversarial_stress_summary.json","artifacts/evasion_regression_gates.csv","artifacts/brief_trust_safety.md","artifacts/brief_engineering.md","artifacts/brief_cela_governance.md"]
+    required=["docs/index.html","artifacts/investigation_queue.csv","artifacts/emerging_trend_alerts.csv","artifacts/data_quality_findings.csv","artifacts/rule_shadow_evaluation.csv","artifacts/review_feedback_metrics.csv","artifacts/mitigation_evaluation.csv","artifacts/stakeholder_action_register.csv","artifacts/feature_drift_diagnostics.csv","artifacts/risk_calibration_bins.csv","artifacts/queue_sla_snapshot.csv","artifacts/queue_capacity_plan.csv","artifacts/detection_rule_registry.csv","artifacts/policy_threshold_frontier.csv","artifacts/policy_threshold_recommendation.json","artifacts/historical_rule_replay.csv","artifacts/historical_case_arrivals.csv","artifacts/historical_rule_replay_summary.csv","artifacts/rule_evidence_power.csv","artifacts/queue_simulation_daily.csv","artifacts/queue_simulation_summary.csv","artifacts/entitlement_cycle_usage.csv","artifacts/billing_family_risk.csv","artifacts/entitlement_investigation_queue.csv","artifacts/entitlement_data_quality.csv","artifacts/emerging_novelty_accounts.csv","artifacts/emerging_behavior_cohorts.csv","artifacts/emerging_graph_triage.csv","artifacts/candidate_taxonomy_proposals.csv","artifacts/novel_shadow_rule_candidates.csv","artifacts/novelty_incident_diagnostics.csv","artifacts/emerging_discovery_benchmark.json","artifacts/adversarial_rule_stress.csv","artifacts/defense_in_depth_stress.csv","artifacts/adversarial_stress_summary.json","artifacts/evasion_regression_gates.csv","artifacts/policy_experiment_assignment.csv","artifacts/policy_experiment_daily_outcomes.csv","artifacts/policy_experiment_effect_summary.csv","artifacts/policy_experiment_pretrend.csv","artifacts/policy_experiment_heterogeneous_effects.csv","artifacts/policy_experiment_sequential_monitor.csv","artifacts/policy_experiment_interference_audit.csv","artifacts/policy_experiment_review_guardrails.csv","artifacts/policy_experiment_stopping_decision.json","artifacts/policy_experiment_benchmark.json","data/hidden_policy_experiment_manifest.csv","artifacts/brief_trust_safety.md","artifacts/brief_engineering.md","artifacts/brief_cela_governance.md"]
     for rel in required: assert (tmp_path/rel).exists(),rel
 
 
@@ -132,3 +132,37 @@ def test_v08_adversarial_adaptation_and_resilience_gates(tmp_path):
     assert not gates.status.eq("fail").any()
     action=pd.read_csv(tmp_path/"artifacts/stakeholder_action_register.csv")
     assert action.decision.str.contains("detection brittleness under adaptive behavior").any()
+
+
+def test_v09_cluster_randomized_policy_experiment_without_post_or_hidden_leakage(tmp_path):
+    run(tmp_path,n_accounts=120,seed=43)
+    assignment=pd.read_csv(tmp_path/"artifacts/policy_experiment_assignment.csv")
+    outcomes=pd.read_csv(tmp_path/"artifacts/policy_experiment_daily_outcomes.csv")
+    effects=pd.read_csv(tmp_path/"artifacts/policy_experiment_effect_summary.csv")
+    pretrend=pd.read_csv(tmp_path/"artifacts/policy_experiment_pretrend.csv")
+    hte=pd.read_csv(tmp_path/"artifacts/policy_experiment_heterogeneous_effects.csv")
+    seq=pd.read_csv(tmp_path/"artifacts/policy_experiment_sequential_monitor.csv")
+    interference=pd.read_csv(tmp_path/"artifacts/policy_experiment_interference_audit.csv")
+    reviews=pd.read_csv(tmp_path/"artifacts/policy_experiment_review_guardrails.csv")
+    stop=json.loads((tmp_path/"artifacts/policy_experiment_stopping_decision.json").read_text())
+    bench=json.loads((tmp_path/"artifacts/policy_experiment_benchmark.json").read_text())
+    manifest=pd.read_csv(tmp_path/"data/hidden_policy_experiment_manifest.csv")
+    assert set(assignment.arm.unique()).issubset({"control","shadow","canary"})
+    assert assignment.groupby("cluster_id").arm.nunique().max()==1
+    assert {"pre_requests_per_active_day","pre_policy_signal_rate","cluster_id","stratum","assigned_canary","exposed"}.issubset(assignment.columns)
+    assert "ground_truth_abuse_type" not in assignment.columns
+    assert "ground_truth_abuse_type" not in outcomes.columns
+    assert "true_responder" not in outcomes.columns
+    assert {"ITT_canary_vs_control","Wald_ATT_style","negative_control_ITT","shadow_placebo_vs_control"}.issubset(set(effects.estimand))
+    assert {"pretrend_slope","slope_gap_vs_control","diagnostic_status"}.issubset(pretrend.columns)
+    assert {"slice_type","slice_value","estimate","reportable"}.issubset(hte.columns)
+    assert seq.sequential_boundary.str.contains("human review required").all()
+    assert interference.loc[interference.network.eq("ip_context_neighbors"),"identity_boundary"].str.contains("never proves common control").all()
+    assert {"matured_reviews","cleared_rate","evidence_status"}.issubset(reviews.columns)
+    assert stop["automatic_policy_expansion_allowed"] is False
+    assert "human policy-owner review required" in stop["decision_boundary"]
+    assert bench["manifest_used_by_assignment"] is False and bench["manifest_used_by_effect_estimation"] is False
+    assert "never used by assignment" in bench["benchmark_boundary"]
+    assert manifest.manifest_boundary.str.contains("never used by assignment or effect estimation").all()
+    action=pd.read_csv(tmp_path/"artifacts/stakeholder_action_register.csv")
+    assert action.decision.str.contains("policy canary should continue, pause, or return to shadow").any()

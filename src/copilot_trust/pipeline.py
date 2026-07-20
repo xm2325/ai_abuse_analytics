@@ -11,6 +11,7 @@ from .emerging_discovery import discover_emerging_abuse
 from .entitlements import build_synthetic_entitlement_ledger, evaluate_entitlement_abuse
 from .evaluate import data_quality_report, evaluate_slices, review_capacity_analysis
 from .evidence_power import evaluate_rule_evidence_power
+from .experiment_guardrails import refine_policy_experiment_guardrails
 from .features import build_feature_mart
 from .feedback import evaluate_review_feedback
 from .generate import SyntheticConfig, generate_synthetic_telemetry
@@ -18,6 +19,7 @@ from .historical_replay import build_historical_replay
 from .investigate import build_investigation_queue, build_linked_account_components
 from .mitigation import evaluate_mitigation
 from .monitoring import build_daily_monitor
+from .policy_experiment import evaluate_policy_experiment
 from .reporting import build_dashboard, build_executive_brief
 from .rules import evaluate_shadow_rules
 from .rule_registry import build_rule_registry
@@ -44,8 +46,6 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     entitlement_usage,billing_families,entitlement_queue,entitlement_dq=evaluate_entitlement_abuse(data,art)
     rules=evaluate_shadow_rules(scores,art); rule_evidence=evaluate_rule_evidence_power(rules,art); rule_registry=build_rule_registry(rules,art,rule_evidence)
     adversarial_stress,defense_stress,adversarial_summary=evaluate_adversarial_adaptation(scores,art)
-    # Make target-scenario recall the primary single-rule resilience view when the synthetic
-    # holdout contains that rule's target scenario; retain overall recall as explicit context.
     adversarial_stress["baseline_overall_recall"]=adversarial_stress["baseline_recall"]
     adversarial_stress["adapted_overall_recall"]=adversarial_stress["adapted_recall"]
     adversarial_stress["overall_recall_drop"]=adversarial_stress["recall_drop"]
@@ -55,8 +55,6 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     adversarial_stress.loc[has_target,"recall_drop"]=adversarial_stress.loc[has_target,"target_recall_drop"]
     adversarial_stress["recall_metric_scope"]=has_target.map({True:"target_scenario",False:"overall_fallback_no_target_holdout"})
     adversarial_stress.to_csv(art/"adversarial_rule_stress.csv",index=False)
-    # Keep backward-compatible summary keys for downstream briefs while making target-scenario
-    # recall the primary single-rule brittleness metric.
     worst_rule=adversarial_summary.get("worst_single_rule",{})
     if worst_rule:
         worst_rule["baseline_recall"]=worst_rule.get("baseline_target_recall",worst_rule.get("baseline_overall_recall"))
@@ -71,8 +69,6 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
         )
         (art/"adversarial_stress_summary.json").write_text(json.dumps(adversarial_summary,indent=2))
     evasion_gates=build_evasion_regression_gates(adversarial_stress,defense_stress,art)
-    # Evidence-volume gate prevents a dramatic percentage drop on n=1 or n=2 from being
-    # presented as a stable resilience estimate.
     if worst_rule:
         target_n=int(worst_rule.get("target_accounts_holdout",0) or 0)
         evidence_gate=pd.DataFrame([{
@@ -88,6 +84,8 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     queue_sla,queue_capacity=evaluate_queue_operations(scores,data,art); simulate_threshold_policy(scores,art)
     replay,replay_arrivals,replay_summary=build_historical_replay(data,art); queue_sim_daily,queue_sim_summary=simulate_queue_capacity(replay_arrivals,art)
     review_feedback,enforcement_safety=evaluate_review_feedback(scores,data,art); mitigation,mitigation_daily=evaluate_mitigation(data,art,seed=seed)
+    policy_experiment=evaluate_policy_experiment(data,art,seed=seed)
+    refine_policy_experiment_guardrails(art)
     build_investigation_queue(scores,data,art); build_linked_account_components(scores,data,art)
     action_register=build_action_register(metrics,slices,dq,alerts,rules,mitigation,art); build_stakeholder_briefs(action_register,review_feedback,signal_backlog,art)
     build_dashboard(scores,metrics,slices,coverage,mitigation,mitigation_daily,daily_monitor,alerts,dq,rules,review_feedback,action_register,review_capacity,drift,calibration,queue_sla,queue_capacity,rule_registry,docs/"index.html")
