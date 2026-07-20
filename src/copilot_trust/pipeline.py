@@ -30,7 +30,7 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     scores,metrics=train_and_score(art/"account_feature_mart.csv",art,seed=seed)
     slices=evaluate_slices(scores,art); review_capacity=review_capacity_analysis(scores,art); coverage=data_quality_report(data,art)
     dq=run_data_contracts(data,art); signal_backlog=build_signal_backlog(art); daily_monitor,alerts=build_daily_monitor(data,art)
-    rules=evaluate_shadow_rules(scores,art); rule_registry=build_rule_registry(rules,art); rule_evidence=evaluate_rule_evidence_power(rules,art)
+    rules=evaluate_shadow_rules(scores,art); rule_evidence=evaluate_rule_evidence_power(rules,art); rule_registry=build_rule_registry(rules,art,rule_evidence)
     drift,calibration=evaluate_drift(scores,art)
     queue_sla,queue_capacity=evaluate_queue_operations(scores,data,art); simulate_threshold_policy(scores,art)
     replay,replay_arrivals,replay_summary=build_historical_replay(data,art); queue_sim_daily,queue_sim_summary=simulate_queue_capacity(replay_arrivals,art)
