@@ -11,6 +11,7 @@ from .emerging_discovery import discover_emerging_abuse
 from .entitlements import build_synthetic_entitlement_ledger, evaluate_entitlement_abuse
 from .evaluate import data_quality_report, evaluate_slices, review_capacity_analysis
 from .evidence_power import evaluate_rule_evidence_power
+from .experiment_guardrails import refine_policy_experiment_guardrails
 from .features import build_feature_mart
 from .feedback import evaluate_review_feedback
 from .generate import SyntheticConfig, generate_synthetic_telemetry
@@ -84,6 +85,7 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     replay,replay_arrivals,replay_summary=build_historical_replay(data,art); queue_sim_daily,queue_sim_summary=simulate_queue_capacity(replay_arrivals,art)
     review_feedback,enforcement_safety=evaluate_review_feedback(scores,data,art); mitigation,mitigation_daily=evaluate_mitigation(data,art,seed=seed)
     policy_experiment=evaluate_policy_experiment(data,art,seed=seed)
+    refine_policy_experiment_guardrails(art)
     build_investigation_queue(scores,data,art); build_linked_account_components(scores,data,art)
     action_register=build_action_register(metrics,slices,dq,alerts,rules,mitigation,art); build_stakeholder_briefs(action_register,review_feedback,signal_backlog,art)
     build_dashboard(scores,metrics,slices,coverage,mitigation,mitigation_daily,daily_monitor,alerts,dq,rules,review_feedback,action_register,review_capacity,drift,calibration,queue_sla,queue_capacity,rule_registry,docs/"index.html")
