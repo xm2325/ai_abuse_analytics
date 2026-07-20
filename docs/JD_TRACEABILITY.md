@@ -1,20 +1,41 @@
 # Job-description traceability
 
-This file maps public role themes to concrete repository evidence without claiming access to internal systems.
+This file maps public role themes to concrete repository evidence without claiming access to internal GitHub systems, data, policy logic, or production enforcement tools.
 
-| Role theme | Project evidence |
-|---|---|
-| Analyze product telemetry and account signals | synthetic telemetry contract, SQL feature mart, daily monitors |
-| Investigate scripted usage, sharing, token misuse, quota evasion, coordinated abuse | generator scenarios, reason codes, case bundles, linked-account evidence |
-| Reports / dashboards / self-service | Decision Center, stakeholder briefs, semantic SQL views |
-| Prototype detection | supervised probability, Isolation Forest, linked-entity signal, shadow rules |
-| False-positive / legitimate-user impact | reportable slice metrics, managed-infrastructure confounders, appeal/overturn loop |
-| Recurring monitoring | robust trend alerts, signal coverage and data-contract checks |
-| Improve abuse-relevant data | signal-integration backlog with owner/decision/privacy class |
-| Operationalize one-off analysis | versioned rule registry, promotion gates, rollback triggers, CI benchmark |
-| Measure mitigations | account-day DiD-style diagnostic, bootstrap interval, pre-trend checks |
-| SQL / Python / BI | SQL analyst queries, Python pipeline, semantic views and HTML Decision Center |
-| Sensitive-data governance | hashed metadata, restricted content boundary, governance/runbook docs |
-| Cross-functional decisions | separate Trust & Safety, Engineering, and privacy/legal briefs plus action register |
+| Public role theme | Repository evidence | Decision demonstrated |
+|---|---|---|
+| Analyze product telemetry and usage logs | `telemetry.csv` contract, SQL feature mart, daily monitors, event-time historical replay | distinguish behavior change from instrumentation failure |
+| Analyze billing / entitlement data | separate `entitlements.csv` source, cycle alignment, `entitlement_cycle_usage.csv`, billing-family analysis | identify multi-account entitlement pressure without treating telemetry as billing truth |
+| Investigate scripted usage | velocity/cadence/overnight signals, shadow rules, historical replay | distinguish automation from high-intensity legitimate use |
+| Investigate account / credential sharing | device/IP dispersion, conservative entity graph, competing explanations | avoid treating shared network context as identity proof |
+| Investigate token misuse | token-degree evidence, linked-account components, legitimate approved-integration token confounders | require corroboration before escalation |
+| Investigate usage-limit evasion | separate entitlement ledger, linked billing families, simultaneous near-limit pressure, SQL investigation query | create investigation leads while excluding explicit managed shared-billing controls |
+| Investigate coordinated activity | coordinated device/IP/payment families and graph evidence | analyze multi-entity patterns rather than isolated accounts |
+| Prompt-injection / policy-signal analysis | aggregate injection/policy/safety-block signals, security-research confounder | investigate safety-signal changes without exposing raw prompts/completions |
+| Build reports, dashboards, and self-service analytics | Decision Center, executive brief, stakeholder briefs, semantic SQL views | make recurring decisions reproducible rather than one-off analyst queries |
+| Prototype detection / anomaly methods | logistic baseline, Isolation Forest, linked-entity signal, candidate shadow rules | compare multiple signal families without equating score with guilt |
+| Evaluate false positives / false negatives | FPR/FNR, reportable operational slices, managed-infrastructure and approved-organization controls | quantify legitimate-user impact before policy change |
+| Critically evaluate statistical assumptions | frozen holdout thresholds, calibration, PSI, one-sided rule uncertainty bounds, evidence-volume gates | reject attractive point estimates when evidence is too small |
+| Recurring monitoring for emerging abuse | robust daily trend alerts, pre/post mitigation/emerging-campaign replay | detect new patterns and separate them from known baselines |
+| Improve abuse-relevant data quality | telemetry contracts, entitlement contracts, signal-integration backlog | block detection changes when source data is unreliable |
+| Recommend new pipelines / integrations | backlog entries with analytical problem, proposed source, decision, privacy class, partner team | connect a missing signal to a concrete decision rather than asking for “more features” |
+| Operationalize one-off investigation methods | versioned rule registry, shadow → canary gates, rollback triggers, CI benchmark | turn an analysis into an auditable recurring process |
+| Review-capacity and operational tradeoffs | review-capacity frontier, P0–P3 SLA, historical case arrivals, 0.5/1/2-FTE queue simulation | test whether a rule is operationally supportable before widening it |
+| Measure mitigation impact | account-day DiD-style diagnostic, bootstrap interval, pre-trend checks | avoid unsupported causal claims from before/after movement |
+| Review / appeal / overturn feedback | delayed label maturity, review feedback metrics, enforcement safety outputs | feed cleared and overturned cases back into rule/threshold review |
+| SQL / Python / BI-style reporting | reusable SQL queries, Python pipeline, semantic views, interactive HTML Decision Center | support both deep investigation and repeatable stakeholder reporting |
+| Sensitive-data governance | hashed/pseudonymous metadata, no raw prompt/completion default layer, raw identity/payment boundary, CELA-style brief | apply purpose limitation and access boundaries to sensitive analysis |
+| Cross-functional decision support | separate Trust & Safety, Engineering, and privacy/legal briefs plus stakeholder action register | translate the same evidence into different owner-specific actions |
+| Mentor / raise analytical quality | analyst playbook, metric contracts, evidence gates, runbooks, tests | encode review standards that another analyst can apply consistently |
 
-The project does not claim GitHub-scale data, Copilot internal telemetry, internal policy access, or production enforcement experience.
+## Explicit limits
+
+The project does not claim:
+
+- GitHub-scale data volume;
+- real Copilot telemetry, prompts, completions, billing, or account records;
+- access to GitHub internal abuse taxonomies or enforcement policy;
+- real CELA decisions or production enforcement experience;
+- causal proof from the synthetic mitigation experiment.
+
+The repository is intended to show the analytical reasoning, controls, tooling, and decision workflow that can transfer to a real Trust & Safety environment.

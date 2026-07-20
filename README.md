@@ -2,199 +2,225 @@
 
 A privacy-safe, reproducible Trust & Safety analytics workbench for AI developer-tool abuse investigation.
 
-> **Portfolio scope:** this is an independent synthetic project inspired by the analytical problems described in a GitHub Data Analyst role supporting Copilot Trust & Safety. It does not use GitHub internal data, internal rules, or production systems.
+> **Portfolio scope:** this is an independent synthetic project inspired by the analytical problems in a public GitHub Data Analyst role supporting Copilot Trust & Safety. It does not use GitHub internal data, rules, policy logic, prompts, completions, or production systems.
 
 ## Executive summary
 
-The project answers a practical operating question:
+The project starts from an operating problem, not a model:
 
-> With limited analyst review capacity, which AI-product accounts should be investigated first, why were they prioritized, how do we avoid harming legitimate users, and did a mitigation actually reduce harmful behavior?
+> With limited analyst capacity, which accounts or account families should be investigated first, why, what benign explanations could produce the same signals, and is there enough evidence to change a detection or mitigation policy?
 
-It models the complete analytical loop rather than a single classifier:
+The workbench models the full decision loop:
 
 ```text
-privacy-safe synthetic telemetry
+privacy-safe telemetry + account + entitlement sources
         ↓
-data contracts + signal coverage
+data contracts and signal coverage
         ↓
 emerging-trend monitoring
         ↓
-SQL feature mart
+SQL feature marts + conservative entity linkage
         ↓
-risk + anomaly + conservative entity linkage
+risk / anomaly / candidate rule signals
         ↓
-review capacity + FPR/FNR + calibration
+false-positive, calibration, evidence-volume and uncertainty checks
         ↓
-shadow rules + promotion / rollback gates
+historical replay + shadow / canary / rollback gates
         ↓
-investigation queue + case evidence + competing explanations
+investigation queue + linked-account and billing-family evidence
         ↓
-human review / enforcement / appeal / overturn feedback
+human review → enforcement decision → appeal / overturn feedback
         ↓
-mitigation measurement + uncertainty
+mitigation measurement + analyst-capacity stress testing
         ↓
-threshold / rule / taxonomy revision
+rule / threshold / taxonomy / data-integration revision
 ```
 
-The default analyst layer does **not** expose raw prompts, completions, IP addresses, payment details, or device identifiers. Scores and candidate rules are used for investigation prioritization, not automatic enforcement.
+The default analyst layer does **not** expose raw prompts, completions, IP addresses, raw device identifiers, card numbers, or payment details. Scores, rules, and billing-family signals prioritize human investigation; they never authorize automatic enforcement.
 
-## What decisions does it support?
+## What real work questions does it answer?
 
-The workbench is built around eight recurring questions:
+| Decision question | Main output | Failure mode the project guards against |
+|---|---|---|
+| What should analysts review first? | investigation queue, P0–P3 SLA, review-capacity scenarios | optimizing AUC without considering analyst workload |
+| Is high usage actually abuse? | behavioral evidence + legitimate power-user controls | `high usage = abuse` |
+| Are accounts truly linked? | token/payment/device/IP evidence with reliability rules | treating NAT, VPN, enterprise egress, or shared runners as identity proof |
+| Is usage-limit evasion occurring? | cycle-level entitlement and billing-family analysis | treating high utilization or shared billing as automatic proof |
+| Is a new rule ready? | shadow evaluation, uncertainty bounds, evidence-volume gate | promoting a rule because `precision=100%` on two cases |
+| Did a rule still work later? | no-lookahead historical replay | random holdout performance hiding temporal failure |
+| Can the team operationalize it? | queue arrival/service simulation | launching a rule that creates unmanageable backlog or SLA breaches |
+| Did telemetry break? | schema, referential, uniqueness, and daily signal-coverage contracts | retuning detection because an upstream producer failed |
+| Did mitigation work? | DiD-style diagnostic, bootstrap interval, pre-trend checks | claiming causal impact from a simple before/after chart |
+| Are users being harmed? | FPR/FNR slices, appeals, overturns, label maturity | ignoring legitimate-user impact and delayed feedback |
 
-1. Which accounts should investigators review first under a fixed analyst-hour budget?
-2. Is unusually high usage abuse, legitimate power use, approved automation, or enterprise infrastructure?
-3. Are accounts linked by reliable identity evidence, or merely by shared NAT/VPN/network context?
-4. Why was an account prioritized and what competing benign explanations must be checked?
-5. Did telemetry coverage or a data producer change before a detection metric moved?
-6. Is a candidate rule safe enough to leave shadow mode, and what would trigger rollback?
-7. Are review, appeal, and overturn outcomes showing systematic false-positive harm?
-8. Did a mitigation reduce abuse after accounting for comparison-group movement and uncertainty?
+## Synthetic benchmark design
 
-## Synthetic abuse scenarios
-
-The generator creates realistic-but-synthetic mixtures of:
+The generator creates six abuse scenarios:
 
 - scripted automation;
 - credential sharing;
-- token misuse;
 - quota / entitlement evasion;
+- token misuse;
 - coordinated abuse;
-- policy / prompt-injection-related safety signals.
+- policy / prompt-injection-related abuse.
 
-It also creates deliberately difficult legitimate confounders:
+For samples large enough to evaluate all scenarios, the benchmark guarantees minimum scenario coverage rather than allowing a random seed to omit an abuse type entirely.
+
+It also creates deliberately difficult legitimate controls:
 
 - high-intensity power users;
-- enterprise/shared infrastructure;
-- security-research behavior;
-- normal variation in device, IP, model-surface, and usage patterns.
+- security-research behavior with elevated safety signals;
+- shared enterprise/network infrastructure;
+- approved organization contexts that legitimately share pseudonymous token, billing, or managed-runner entities.
 
-This prevents the benchmark from becoming a trivial `high usage = abuse` exercise.
+The approved-organization context is retained for investigation but intentionally excluded from model features. This prevents shared-entity signals from becoming a label shortcut.
 
-## v0.3: operational analytics controls
+## v0.6 — billing and entitlement abuse analytics
 
-### 1. Population drift and calibration
+A major design rule is:
 
-`src/copilot_trust/drift.py` produces:
+> Telemetry is not the billing source of truth.
 
-- `feature_drift_diagnostics.csv`: Population Stability Index (PSI) diagnostics between development and holdout populations;
-- `risk_calibration_bins.csv`: predicted risk versus observed known-abuse rate by risk bin.
-
-The operating rule is explicit: a population-shift diagnostic should trigger investigation of instrumentation and segment mix before model changes.
-
-### 2. Queue SLA and analyst capacity
-
-`src/copilot_trust/queue_ops.py` converts flagged accounts into an operational queue with:
-
-- P0–P3 priority tiers;
-- queue age and synthetic service-level targets;
-- estimated review minutes;
-- risk-per-review-minute prioritization;
-- analyst-hour scenarios for expected case coverage and known-abuse recall.
-
-The purpose is to connect model output to real review capacity rather than report AUC alone.
-
-### 3. Versioned rule registry and rollback
-
-`src/copilot_trust/rule_registry.py` turns shadow evaluation into an auditable rule register with:
-
-- rule ID and version;
-- current stage (`shadow_more_evidence`, `shadow_revise`, or `canary_review_queue`);
-- promotion gates;
-- rollback triggers;
-- an explicit `automatic_enforcement_allowed = false` boundary.
-
-A rule with 100% holdout precision on only two triggered accounts is not treated as production-ready evidence.
-
-### 4. Self-service semantic layer
-
-`sql/06_self_service_semantic_views.sql` defines stable account-review and daily-health views so dashboards do not repeatedly redefine precision, false-positive rate, review workload, or signal coverage.
-
-## Benchmark snapshot
-
-The checked benchmark uses `180` synthetic accounts with seed `17`.
-
-| Metric | Value |
-|---|---:|
-| Holdout accounts | 54 |
-| ROC AUC | 0.914 |
-| Average precision | 0.653 |
-| Brier score | 0.070 |
-| Precision at selected threshold | 0.500 |
-| Recall at selected threshold | 0.400 |
-| False-positive rate | 0.041 |
-
-These values are **synthetic benchmark results, not production performance claims**. The small holdout is intentionally treated as uncertain: slice metrics include reportability checks, candidate rules require sufficient trigger volume, and mitigation estimates include uncertainty intervals.
-
-## Detection is not enforcement
-
-The risk score combines three signal families:
+`src/copilot_trust/entitlements.py` creates a separate synthetic entitlement ledger with:
 
 ```text
-0.68 × supervised probability
-+ 0.17 × anomaly score
-+ 0.15 × linked-entity signal
+account_id
+cycle_index
+cycle_start / cycle_end
+plan
+billing_status
+entitlement_limit_per_active_day
+entitlement_contract_version
+billing_family_ref
+billing_context
+managed_infrastructure
+source_system
 ```
 
-Those weights are benchmark design choices, not a claim about any GitHub system.
+The analysis aligns usage to entitlement cycles and produces:
 
-A high score means:
+- `entitlement_cycle_usage.csv` — account-cycle utilization and near-limit state;
+- `billing_family_risk.csv` — multi-account billing-family pressure and explicit shared-billing controls;
+- `entitlement_investigation_queue.csv` — privacy-safe investigation leads;
+- `entitlement_data_quality.csv` — schema, account-key, and account-cycle uniqueness checks.
+
+A candidate billing family requires multiple linked accounts under simultaneous entitlement pressure. Even then it is only an investigation lead.
+
+The benchmark separately creates legitimate managed/shared organization billing families. They are explicitly marked for enterprise-context review rather than evasion escalation.
+
+See `docs/BILLING_ENTITLEMENT_INVESTIGATION.md` and `sql/09_entitlement_evasion_investigation.sql`.
+
+## v0.5 — historical replay, evidence power, and queue stress
+
+### No-lookahead replay
+
+`historical_rule_replay.csv` evaluates rule versions at historical checkpoints using only events available up to each checkpoint.
+
+Distribution-derived thresholds are learned once from the allowed development period and frozen before holdout/replay use. This removes silent threshold adaptation on evaluation data.
+
+Replay periods include:
 
 ```text
-prioritize for investigation
+pre-mitigation
+post-mitigation
+emerging-abuse campaign
 ```
 
-It does **not** mean:
+### Mature labels only
+
+Review outcomes are delayed in real operations. Replay therefore records `matured_label_coverage_of_triggers` and does not silently convert unresolved or immature cases into negatives.
+
+### Evidence power
+
+`rule_evidence_power.csv` reports both point estimates and one-sided uncertainty bounds:
 
 ```text
-automatically suspend the user
+observed FPR
+95% upper FPR bound
+observed precision
+95% lower precision bound
+trigger volume
+evidence sufficiency
 ```
 
-Every case bundle includes evidence, recent activity, identity-context cautions, competing explanations, and an evidence standard before escalation.
+A rule with zero observed false positives can still remain `shadow_more_evidence` when the sample is too small to support the target FPR.
+
+### Queue stress testing
+
+`queue_simulation_summary.csv` evaluates synthetic 0.5, 1.0, and 2.0 analyst-FTE scenarios using only arrival date, priority, risk proxy, and estimated review effort.
+
+It reports:
+
+- backlog;
+- SLA breaches;
+- utilization;
+- maximum/final backlog;
+- p95 time to review.
+
+Benchmark labels are not used to prioritize the simulated queue.
+
+See `docs/HISTORICAL_REPLAY_AND_EVIDENCE.md` and `sql/08_historical_rule_replay.sql`.
+
+## Threshold policy is a decision problem, not a tuning problem
+
+`policy_threshold_frontier.csv` evaluates candidate human-review thresholds against:
+
+- global false-positive rate;
+- review-capacity share;
+- worst reportable slice FPR;
+- minimum precision;
+- minimum triggered-account evidence volume.
+
+The system can return:
+
+```text
+no_threshold_meets_all_guardrails
+```
+
+rather than forcing a policy recommendation.
+
+See `docs/THRESHOLD_POLICY_REVIEW.md` and `sql/07_threshold_policy_frontier.sql`.
 
 ## Conservative linked-account analysis
 
-Entity linkage uses different reliability levels:
+Entity signals have different meanings:
 
-| Entity | Benchmark reliability | Use |
-|---|---:|---|
-| token fingerprint | 1.00 | strong linkage seed with lifecycle context |
-| payment fingerprint | 0.90 | strong supporting linkage |
-| device fingerprint | 0.80 | useful with corroboration |
-| IP context | 0.35 | supporting context only |
+| Entity | Benchmark role |
+|---|---|
+| token fingerprint | strong link only with lifecycle/context review |
+| billing/payment-family reference | strong supporting relation, but shared organization billing is a known confounder |
+| device fingerprint | useful with corroboration; managed runners can be shared legitimately |
+| IP context | supporting context only; never identity proof |
 
-High-degree shared entities are prevented from automatically seeding components. IP sharing alone is never treated as identity proof because NAT, VPNs, enterprise egress, managed fleets, and shared runners can create legitimate overlap.
-
-## Emerging-trend monitoring and data incidents
-
-`src/copilot_trust/monitoring.py` tracks daily:
-
-- requests per active account;
-- agent usage share;
-- prompt-injection signal rate;
-- content-policy signal rate;
-- safety-block rate;
-- near-quota account rate;
-- IP and device signal missingness.
-
-Alerts use rolling robust baselines, MAD-based robust z-scores, materiality checks, and persistence/extreme-event gates.
-
-The synthetic benchmark also injects a short IP-telemetry coverage incident. The required action is to repair/annotate the data incident before detection retuning.
+High-degree shared entities are prevented from automatically creating giant account components.
 
 ## Shadow rule lifecycle
 
-Candidate rules cover identity dispersion, shared tokens, scripted usage, quota evasion, and policy-signal escalation.
+Candidate rules cover identity dispersion, shared tokens, scripted usage, quota evasion, and policy signals.
 
-Each rule reports:
+The workflow is:
 
-- development and holdout trigger volume;
-- precision and recall;
-- false-positive rate;
-- review workload;
-- legitimate-confounder hits;
-- promotion recommendation.
+```text
+hypothesis
+  ↓
+shadow rule
+  ↓
+frozen definition
+  ↓
+holdout + temporal replay
+  ↓
+evidence-volume / uncertainty review
+  ↓
+legitimate-user impact review
+  ↓
+queue-capacity review
+  ↓
+canary human-review queue OR remain in shadow
+  ↓
+rollback if user impact, appeals, queue SLA, or data contracts deteriorate
+```
 
-The rule registry then adds versioning, owner, promotion gate, rollback trigger, and enforcement boundary.
+`automatic_enforcement_allowed` is always false in the rule registry.
 
 ## Review → appeal → overturn feedback
 
@@ -213,39 +239,58 @@ taxonomy_version
 policy_version
 ```
 
-Recent review outcomes are treated as delayed labels using a maturity window. Cleared cases and overturned enforcement decisions are negative feedback for threshold/rule review rather than being discarded.
+Cleared cases and overturned enforcement decisions are negative feedback for rule/threshold review. Recent outcomes are subject to a label-maturity window.
+
+## Emerging-trend monitoring and data incidents
+
+Daily monitoring covers:
+
+- requests per active account;
+- agent usage share;
+- prompt-injection and content-policy signal rates;
+- safety-block rate;
+- entitlement pressure;
+- IP/device signal missingness.
+
+The synthetic benchmark injects a telemetry-coverage incident. The required response is to repair or annotate the data problem before detection retuning.
 
 ## Mitigation measurement
 
 The project builds an account-day panel and reports a difference-in-differences-style diagnostic with:
 
-- treated versus comparison groups;
+- treated and comparison groups;
 - pre/post means;
 - bootstrap 95% interval;
 - pre-trend slopes.
 
-The benchmark output explicitly states that the synthetic assignment is not randomized and the result is not causal proof.
-
-## Data quality as part of the detection system
-
-Contracts check:
-
-- required schema;
-- request-ID uniqueness;
-- account referential integrity;
-- model-family domain;
-- daily IP/device/token/payment signal coverage.
-
-A telemetry regression is treated as a detection-system incident. The project also generates a signal-integration backlog linking each proposed data source to the analytical problem, decision, privacy class, and partner team.
+This is an observational synthetic diagnostic, not causal proof.
 
 ## Stakeholder outputs
 
-The pipeline creates different decision products for different audiences:
+Different teams receive different decision products:
 
-- `brief_trust_safety.md`: investigation, user-impact, rule-readiness, review feedback, mitigation evidence;
-- `brief_engineering.md`: telemetry failures and highest-value integration requests;
-- `brief_cela_governance.md`: purpose limitation, raw-content boundaries, identity linkage, enforcement boundaries, and auditability;
-- `stakeholder_action_register.csv`: priority, decision, evidence, action, owner, partners, and review gate.
+- `brief_trust_safety.md` — investigation priorities, user impact, rule readiness, review feedback, mitigation evidence;
+- `brief_engineering.md` — telemetry failures and high-value data integrations;
+- `brief_cela_governance.md` — purpose limitation, data-access boundaries, identity linkage, enforcement boundaries, auditability;
+- `stakeholder_action_register.csv` — priority, evidence, recommended action, owner, partner teams, and review gate.
+
+## Decision Center
+
+Running the pipeline writes `docs/index.html` with sections for:
+
+```text
+executive decisions
+emerging trends
+historical replay and evidence sufficiency
+billing and entitlement abuse
+false-positive / legitimate-user impact
+investigation
+queue operations and stress testing
+data quality
+drift and calibration
+mitigation
+governance and appeal feedback
+```
 
 ## Quick start
 
@@ -262,36 +307,42 @@ Run tests:
 pytest -q
 ```
 
-The pipeline generates synthetic event data locally, rebuilds all analytical artifacts, and writes `docs/index.html` as the Decision Center.
+GitHub Actions independently rebuilds a synthetic benchmark, verifies the required decision artifacts, and uploads the decision package. Benchmark metrics are intentionally not hard-coded in this README because they change when the synthetic stress design changes; use the generated `model_metrics.json` and the CI artifact for the checked run.
 
 ## Repository map
 
 ```text
 src/copilot_trust/
-  generate.py          synthetic telemetry + review feedback
-  features.py          SQL-style account feature mart
-  scoring.py           supervised + anomaly + graph risk scoring
-  monitoring.py        recurring trend monitoring
-  data_quality.py      contracts + signal-integration backlog
-  rules.py             shadow rule evaluation
-  rule_registry.py     versioning, promotion, rollback
-  investigate.py       queue, case bundles, linked-account evidence
-  feedback.py          review / appeal / overturn loop
-  mitigation.py        DiD-style mitigation diagnostics
-  drift.py             PSI + calibration diagnostics
-  queue_ops.py         SLA / analyst-capacity planning
-  stakeholder.py       cross-functional decision outputs
-  reporting.py         Decision Center + executive brief
+  generate.py             synthetic telemetry + review feedback
+  synthetic_controls.py   legitimate entity-sharing confounders
+  entitlements.py         separate billing/entitlement source and cycle analysis
+  features.py             SQL-style account feature mart
+  scoring.py              supervised + anomaly + graph risk scoring
+  monitoring.py           recurring trend monitoring
+  data_quality.py         contracts + signal-integration backlog
+  rules.py                frozen shadow-rule evaluation
+  evidence_power.py       uncertainty/evidence sufficiency
+  rule_registry.py        versioning, promotion, rollback
+  historical_replay.py    no-lookahead temporal replay
+  investigate.py          queue, case bundles, linked-account evidence
+  queue_ops.py            SLA / analyst-capacity planning
+  queue_simulation.py     arrival/service stress testing
+  feedback.py             review / appeal / overturn loop
+  mitigation.py           DiD-style mitigation diagnostics
+  drift.py                PSI + calibration diagnostics
+  policy_simulation.py    threshold-policy frontier
+  stakeholder.py          cross-functional decision outputs
+  reporting.py            Decision Center + executive brief
 
-sql/                    analyst queries and semantic views
-config/                 taxonomy + metric contracts
-docs/                   architecture, governance, runbooks, operating model
-tests/                  integration and enforcement-boundary tests
-.github/workflows/       reproducible CI benchmark
+sql/                       reusable analyst queries and semantic views
+config/                    taxonomy + metric contracts
+docs/                      architecture, governance, runbooks, operating model
+tests/                     integration, safety-boundary, and artifact-contract tests
+.github/workflows/          reproducible CI benchmark
 ```
 
 ## Production boundary
 
-CSV + SQLite/Pandas are used for a local, reproducible portfolio benchmark. A production design would use partitioned event-time marts, incremental materialization, late-arrival handling, idempotent backfills, restricted raw-content access, and versioned data/taxonomy contracts.
+CSV + SQLite/Pandas are used for a local, reproducible portfolio benchmark. A production design would use event-time partitioned marts, incremental materialization, late-arrival handling, idempotent backfills, versioned contracts/taxonomies, restricted raw-content access, and controlled identity/billing integrations.
 
-This repository intentionally does not pretend to reproduce GitHub production scale or internal systems.
+This repository intentionally does not claim to reproduce GitHub production scale, internal systems, internal policies, or real Copilot abuse data.

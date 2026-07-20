@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 from .data_quality import build_signal_backlog, run_data_contracts
 from .drift import evaluate_drift
+from .entitlements import build_synthetic_entitlement_ledger, evaluate_entitlement_abuse
 from .evaluate import data_quality_report, evaluate_slices, review_capacity_analysis
 from .evidence_power import evaluate_rule_evidence_power
 from .features import build_feature_mart
@@ -21,15 +22,19 @@ from .queue_simulation import simulate_queue_capacity
 from .policy_simulation import simulate_threshold_policy
 from .scoring import train_and_score
 from .stakeholder import build_action_register, build_stakeholder_briefs
+from .synthetic_controls import inject_legitimate_entity_confounders
 
 
 def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     root=Path(root); data=root/"data"; art=root/"artifacts"; docs=root/"docs"
     generate_synthetic_telemetry(data,SyntheticConfig(n_accounts=n_accounts,seed=seed))
+    inject_legitimate_entity_confounders(data)
+    build_synthetic_entitlement_ledger(data)
     build_feature_mart(data,art/"account_feature_mart.csv")
     scores,metrics=train_and_score(art/"account_feature_mart.csv",art,seed=seed)
     slices=evaluate_slices(scores,art); review_capacity=review_capacity_analysis(scores,art); coverage=data_quality_report(data,art)
     dq=run_data_contracts(data,art); signal_backlog=build_signal_backlog(art); daily_monitor,alerts=build_daily_monitor(data,art)
+    entitlement_usage,billing_families,entitlement_queue,entitlement_dq=evaluate_entitlement_abuse(data,art)
     rules=evaluate_shadow_rules(scores,art); rule_evidence=evaluate_rule_evidence_power(rules,art); rule_registry=build_rule_registry(rules,art,rule_evidence)
     drift,calibration=evaluate_drift(scores,art)
     queue_sla,queue_capacity=evaluate_queue_operations(scores,data,art); simulate_threshold_policy(scores,art)

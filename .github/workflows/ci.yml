@@ -40,6 +40,11 @@ jobs:
           test -s artifacts/rule_evidence_power.csv
           test -s artifacts/queue_simulation_daily.csv
           test -s artifacts/queue_simulation_summary.csv
+          test -s artifacts/entitlement_cycle_usage.csv
+          test -s artifacts/billing_family_risk.csv
+          test -s artifacts/entitlement_investigation_queue.csv
+          test -s artifacts/entitlement_data_quality.csv
+          test -s data/entitlements.csv
           test -s docs/index.html
       - uses: actions/upload-artifact@v4
         with:
@@ -63,6 +68,10 @@ jobs:
             artifacts/historical_case_arrivals.csv
             artifacts/queue_simulation_daily.csv
             artifacts/queue_simulation_summary.csv
+            artifacts/entitlement_cycle_usage.csv
+            artifacts/billing_family_risk.csv
+            artifacts/entitlement_investigation_queue.csv
+            artifacts/entitlement_data_quality.csv
             artifacts/review_feedback_metrics.csv
             artifacts/enforcement_safety_metrics.csv
             artifacts/mitigation_evaluation.csv
