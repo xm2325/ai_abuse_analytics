@@ -12,7 +12,7 @@ def test_small_pipeline(tmp_path):
     assert 0<=m["roc_auc"]<=1
     assert 0<=m["false_positive_rate"]<=1
     assert 0<=m["brier_score"]<=1
-    required=["docs/index.html","artifacts/investigation_queue.csv","artifacts/emerging_trend_alerts.csv","artifacts/data_quality_findings.csv","artifacts/rule_shadow_evaluation.csv","artifacts/review_feedback_metrics.csv","artifacts/mitigation_evaluation.csv","artifacts/stakeholder_action_register.csv","artifacts/feature_drift_diagnostics.csv","artifacts/risk_calibration_bins.csv","artifacts/queue_sla_snapshot.csv","artifacts/queue_capacity_plan.csv","artifacts/detection_rule_registry.csv","artifacts/policy_threshold_frontier.csv","artifacts/policy_threshold_recommendation.json","artifacts/historical_rule_replay.csv","artifacts/historical_case_arrivals.csv","artifacts/historical_rule_replay_summary.csv","artifacts/rule_evidence_power.csv","artifacts/queue_simulation_daily.csv","artifacts/queue_simulation_summary.csv","artifacts/entitlement_cycle_usage.csv","artifacts/billing_family_risk.csv","artifacts/entitlement_investigation_queue.csv","artifacts/entitlement_data_quality.csv","artifacts/emerging_novelty_accounts.csv","artifacts/emerging_behavior_cohorts.csv","artifacts/emerging_graph_triage.csv","artifacts/candidate_taxonomy_proposals.csv","artifacts/novel_shadow_rule_candidates.csv","artifacts/novelty_incident_diagnostics.csv","artifacts/emerging_discovery_benchmark.json","artifacts/brief_trust_safety.md","artifacts/brief_engineering.md","artifacts/brief_cela_governance.md"]
+    required=["docs/index.html","artifacts/investigation_queue.csv","artifacts/emerging_trend_alerts.csv","artifacts/data_quality_findings.csv","artifacts/rule_shadow_evaluation.csv","artifacts/review_feedback_metrics.csv","artifacts/mitigation_evaluation.csv","artifacts/stakeholder_action_register.csv","artifacts/feature_drift_diagnostics.csv","artifacts/risk_calibration_bins.csv","artifacts/queue_sla_snapshot.csv","artifacts/queue_capacity_plan.csv","artifacts/detection_rule_registry.csv","artifacts/policy_threshold_frontier.csv","artifacts/policy_threshold_recommendation.json","artifacts/historical_rule_replay.csv","artifacts/historical_case_arrivals.csv","artifacts/historical_rule_replay_summary.csv","artifacts/rule_evidence_power.csv","artifacts/queue_simulation_daily.csv","artifacts/queue_simulation_summary.csv","artifacts/entitlement_cycle_usage.csv","artifacts/billing_family_risk.csv","artifacts/entitlement_investigation_queue.csv","artifacts/entitlement_data_quality.csv","artifacts/emerging_novelty_accounts.csv","artifacts/emerging_behavior_cohorts.csv","artifacts/emerging_graph_triage.csv","artifacts/candidate_taxonomy_proposals.csv","artifacts/novel_shadow_rule_candidates.csv","artifacts/novelty_incident_diagnostics.csv","artifacts/emerging_discovery_benchmark.json","artifacts/adversarial_rule_stress.csv","artifacts/defense_in_depth_stress.csv","artifacts/adversarial_stress_summary.json","artifacts/evasion_regression_gates.csv","artifacts/brief_trust_safety.md","artifacts/brief_engineering.md","artifacts/brief_cela_governance.md"]
     for rel in required: assert (tmp_path/rel).exists(),rel
 
 
@@ -111,3 +111,24 @@ def test_v07_unknown_pattern_discovery_without_label_leakage(tmp_path):
     assert shadow.next_stage.eq("independent_shadow_replay_required").all()
     assert graph.identity_boundary.str.contains("never proves common control").all()
     assert not incident.status.eq("possible_data_incident").all()
+
+
+def test_v08_adversarial_adaptation_and_resilience_gates(tmp_path):
+    run(tmp_path,n_accounts=120,seed=41)
+    stress=pd.read_csv(tmp_path/"artifacts/adversarial_rule_stress.csv")
+    defense=pd.read_csv(tmp_path/"artifacts/defense_in_depth_stress.csv")
+    gates=pd.read_csv(tmp_path/"artifacts/evasion_regression_gates.csv")
+    summary=json.loads((tmp_path/"artifacts/adversarial_stress_summary.json").read_text())
+    assert {"strategy","adaptation_strength","rule_name","baseline_recall","adapted_recall","recall_drop","simulation_boundary"}.issubset(stress.columns)
+    assert set(stress.strategy.unique())=={"velocity_smoothing","identity_fragmentation","token_rotation","quota_spreading","policy_signal_suppression","multi_signal_blending"}
+    assert set(stress.adaptation_strength.unique())=={0.25,0.5,0.75,1.0}
+    assert stress.simulation_boundary.str.contains("not a real-product bypass procedure").all()
+    assert (stress.recall_drop>=-1e-12).all()
+    assert {"defense","recall_drop","policy_boundary"}.issubset(defense.columns)
+    assert defense.policy_boundary.str.contains("diagnostic only").all()
+    assert summary["automatic_enforcement_allowed"] is False
+    assert summary["worst_single_rule"]["recall_drop"] >= 0
+    assert {"single_rule_brittleness_visible","defense_in_depth_not_worse_than_worst_single","severe_adaptation_recall_floor"}.issubset(set(gates.gate))
+    assert not gates.status.eq("fail").any()
+    action=pd.read_csv(tmp_path/"artifacts/stakeholder_action_register.csv")
+    assert action.decision.str.contains("detection brittleness under adaptive behavior").any()
