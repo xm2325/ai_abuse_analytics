@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.0 — unknown / emerging abuse discovery
+
+- Added a benchmark-only hidden late-emerging pattern that is absent from the known abuse taxonomy.
+- Added recent-vs-baseline multivariate novelty scoring without using abuse labels or review outcomes.
+- Added behavior-cohort clustering, candidate taxonomy proposals, and development-only shadow-rule definitions.
+- Added telemetry-health diagnostics so behavioral novelty is separated from instrumentation incidents before escalation.
+- Added graph/context triage with a strict boundary that IP-only overlap never proves common control.
+- Added benchmark-only hidden-pattern recall calculated after discovery; the hidden manifest is never used by ranking, clustering, graph triage, or taxonomy generation.
+- Added Decision Center views, SQL workflow, documentation, tests, and CI artifact contracts.
+
+Novelty is not an abuse verdict. A discovered cohort must pass analyst competing-explanation review, independent shadow/replay validation, matured-label review, uncertainty guardrails, and queue-capacity checks before any policy change.
+
 ## v0.6.0 — billing and entitlement abuse analytics
 
 - Added a separate synthetic entitlement ledger rather than treating telemetry as the billing source of truth.
