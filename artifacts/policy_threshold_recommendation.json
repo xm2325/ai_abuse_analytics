@@ -1,0 +1,19 @@
+{
+  "status": "no_threshold_meets_all_guardrails",
+  "selected_threshold": 0.7644099093513981,
+  "precision": 1.0,
+  "recall": 0.2,
+  "global_false_positive_rate": 0.0,
+  "worst_reportable_slice_fpr": 0.0,
+  "review_workload_share": 0.018518518518518517,
+  "estimated_reviews_per_1000_accounts": 19,
+  "guardrails": {
+    "max_global_fpr": 0.05,
+    "max_review_share": 0.15,
+    "max_reportable_slice_fpr": 0.1,
+    "min_precision": 0.5,
+    "min_triggered_accounts": 5
+  },
+  "enforcement_boundary": "human investigation prioritization only; never automatic enforcement",
+  "evidence_warning": "Synthetic holdout and delayed-label benchmark; re-estimate on matured production review outcomes before policy change."
+}

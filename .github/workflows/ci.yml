@@ -32,6 +32,8 @@ jobs:
           test -s artifacts/queue_sla_snapshot.csv
           test -s artifacts/queue_capacity_plan.csv
           test -s artifacts/detection_rule_registry.csv
+          test -s artifacts/policy_threshold_frontier.csv
+          test -s artifacts/policy_threshold_recommendation.json
           test -s docs/index.html
       - uses: actions/upload-artifact@v4
         with:
@@ -58,4 +60,6 @@ jobs:
             artifacts/queue_sla_snapshot.csv
             artifacts/queue_capacity_plan.csv
             artifacts/detection_rule_registry.csv
+            artifacts/policy_threshold_frontier.csv
+            artifacts/policy_threshold_recommendation.json
             docs/index.html
