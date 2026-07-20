@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 from .data_quality import build_signal_backlog, run_data_contracts
 from .drift import evaluate_drift
+from .emerging_discovery import discover_emerging_abuse
 from .entitlements import build_synthetic_entitlement_ledger, evaluate_entitlement_abuse
 from .evaluate import data_quality_report, evaluate_slices, review_capacity_analysis
 from .evidence_power import evaluate_rule_evidence_power
@@ -23,17 +24,20 @@ from .policy_simulation import simulate_threshold_policy
 from .scoring import train_and_score
 from .stakeholder import build_action_register, build_stakeholder_briefs
 from .synthetic_controls import inject_legitimate_entity_confounders
+from .synthetic_novelty import inject_hidden_emerging_pattern
 
 
 def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
     root=Path(root); data=root/"data"; art=root/"artifacts"; docs=root/"docs"
     generate_synthetic_telemetry(data,SyntheticConfig(n_accounts=n_accounts,seed=seed))
     inject_legitimate_entity_confounders(data)
+    inject_hidden_emerging_pattern(data,seed=seed)
     build_synthetic_entitlement_ledger(data)
     build_feature_mart(data,art/"account_feature_mart.csv")
     scores,metrics=train_and_score(art/"account_feature_mart.csv",art,seed=seed)
     slices=evaluate_slices(scores,art); review_capacity=review_capacity_analysis(scores,art); coverage=data_quality_report(data,art)
     dq=run_data_contracts(data,art); signal_backlog=build_signal_backlog(art); daily_monitor,alerts=build_daily_monitor(data,art)
+    discovery=discover_emerging_abuse(data,art,scores,seed=seed)
     entitlement_usage,billing_families,entitlement_queue,entitlement_dq=evaluate_entitlement_abuse(data,art)
     rules=evaluate_shadow_rules(scores,art); rule_evidence=evaluate_rule_evidence_power(rules,art); rule_registry=build_rule_registry(rules,art,rule_evidence)
     drift,calibration=evaluate_drift(scores,art)
@@ -49,5 +53,6 @@ def run(root: str | Path, n_accounts: int = 4500, seed: int = 17):
 
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--root",default="."); p.add_argument("--n-accounts",type=int,default=180); p.add_argument("--seed",type=int,default=17); a=p.parse_args(); print(run(a.root,a.n_accounts,a.seed))
+
 
 if __name__=="__main__": main()

@@ -12,7 +12,7 @@ def test_small_pipeline(tmp_path):
     assert 0<=m["roc_auc"]<=1
     assert 0<=m["false_positive_rate"]<=1
     assert 0<=m["brier_score"]<=1
-    required=["docs/index.html","artifacts/investigation_queue.csv","artifacts/emerging_trend_alerts.csv","artifacts/data_quality_findings.csv","artifacts/rule_shadow_evaluation.csv","artifacts/review_feedback_metrics.csv","artifacts/mitigation_evaluation.csv","artifacts/stakeholder_action_register.csv","artifacts/feature_drift_diagnostics.csv","artifacts/risk_calibration_bins.csv","artifacts/queue_sla_snapshot.csv","artifacts/queue_capacity_plan.csv","artifacts/detection_rule_registry.csv","artifacts/policy_threshold_frontier.csv","artifacts/policy_threshold_recommendation.json","artifacts/historical_rule_replay.csv","artifacts/historical_case_arrivals.csv","artifacts/historical_rule_replay_summary.csv","artifacts/rule_evidence_power.csv","artifacts/queue_simulation_daily.csv","artifacts/queue_simulation_summary.csv","artifacts/entitlement_cycle_usage.csv","artifacts/billing_family_risk.csv","artifacts/entitlement_investigation_queue.csv","artifacts/entitlement_data_quality.csv","artifacts/brief_trust_safety.md","artifacts/brief_engineering.md","artifacts/brief_cela_governance.md"]
+    required=["docs/index.html","artifacts/investigation_queue.csv","artifacts/emerging_trend_alerts.csv","artifacts/data_quality_findings.csv","artifacts/rule_shadow_evaluation.csv","artifacts/review_feedback_metrics.csv","artifacts/mitigation_evaluation.csv","artifacts/stakeholder_action_register.csv","artifacts/feature_drift_diagnostics.csv","artifacts/risk_calibration_bins.csv","artifacts/queue_sla_snapshot.csv","artifacts/queue_capacity_plan.csv","artifacts/detection_rule_registry.csv","artifacts/policy_threshold_frontier.csv","artifacts/policy_threshold_recommendation.json","artifacts/historical_rule_replay.csv","artifacts/historical_case_arrivals.csv","artifacts/historical_rule_replay_summary.csv","artifacts/rule_evidence_power.csv","artifacts/queue_simulation_daily.csv","artifacts/queue_simulation_summary.csv","artifacts/entitlement_cycle_usage.csv","artifacts/billing_family_risk.csv","artifacts/entitlement_investigation_queue.csv","artifacts/entitlement_data_quality.csv","artifacts/emerging_novelty_accounts.csv","artifacts/emerging_behavior_cohorts.csv","artifacts/emerging_graph_triage.csv","artifacts/candidate_taxonomy_proposals.csv","artifacts/novel_shadow_rule_candidates.csv","artifacts/novelty_incident_diagnostics.csv","artifacts/emerging_discovery_benchmark.json","artifacts/brief_trust_safety.md","artifacts/brief_engineering.md","artifacts/brief_cela_governance.md"]
     for rel in required: assert (tmp_path/rel).exists(),rel
 
 
@@ -86,3 +86,28 @@ def test_v06_entitlement_abuse_and_shared_billing_context(tmp_path):
     assert families.candidate_multi_account_evasion.eq(1).any()
     assert ((families.shared_billing_context==1) & families.reason_codes.str.contains("shared_billing_requires_enterprise_context_review")).any()
     assert not ((families.shared_billing_context==1) & (families.candidate_multi_account_evasion==1)).any()
+
+
+def test_v07_unknown_pattern_discovery_without_label_leakage(tmp_path):
+    run(tmp_path,n_accounts=120,seed=37)
+    manifest=pd.read_csv(tmp_path/"data/hidden_novelty_manifest.csv")
+    novelty=pd.read_csv(tmp_path/"artifacts/emerging_novelty_accounts.csv")
+    cohorts=pd.read_csv(tmp_path/"artifacts/emerging_behavior_cohorts.csv")
+    graph=pd.read_csv(tmp_path/"artifacts/emerging_graph_triage.csv")
+    taxonomy=pd.read_csv(tmp_path/"artifacts/candidate_taxonomy_proposals.csv")
+    shadow=pd.read_csv(tmp_path/"artifacts/novel_shadow_rule_candidates.csv")
+    incident=pd.read_csv(tmp_path/"artifacts/novelty_incident_diagnostics.csv")
+    bench=json.loads((tmp_path/"artifacts/emerging_discovery_benchmark.json").read_text())
+    assert len(manifest)>=3 and manifest.taxonomy_visible_to_detector.eq(0).all()
+    assert "hidden_pattern" not in novelty.columns
+    assert "ground_truth_abuse_type" not in novelty.columns
+    assert len(novelty) < 0.20 * 120
+    assert bench["hidden_manifest_present"] is True
+    assert bench["hidden_recall_at_candidate_set"] >= 0.50
+    assert "never used by discovery" in bench["benchmark_only_label_boundary"]
+    assert {"candidate_taxonomy_name","data_incident_screen"}.issubset(cohorts.columns)
+    assert taxonomy.policy_boundary.str.contains("not an abuse finding").all()
+    assert shadow.automatic_enforcement_allowed.astype(str).str.lower().eq("false").all()
+    assert shadow.next_stage.eq("independent_shadow_replay_required").all()
+    assert graph.identity_boundary.str.contains("never proves common control").all()
+    assert not incident.status.eq("possible_data_incident").all()
